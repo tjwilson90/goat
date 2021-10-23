@@ -1,0 +1,9 @@
+[package]
+name = "goat_bot"
+version = "0.0.0"
+edition = "2018"
+
+[dependencies]
+goat_api = { path = "../goat_api" }
+log = "*"
+tokio = { version = "*", features = ["sync"] }

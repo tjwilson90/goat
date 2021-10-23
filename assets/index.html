@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goat</title>
+    <script type="module" src="./assets/goat.js"></script>
+</head>
+<body>
+    <input type="text" id="name" placeholder="Name">
+    <script type="module">
+        import init from './assets/wasm/goat_wasm.js';
+        await init();
+        start();
+    </script>
+</body>
+</html>

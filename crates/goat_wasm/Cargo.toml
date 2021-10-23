@@ -1,0 +1,19 @@
+[package]
+name = "goat_wasm"
+version = "0.0.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["console_error_panic_hook", "wee_alloc"]
+
+[dependencies]
+console_error_panic_hook = { version = "*", optional = true }
+getrandom = { version = "*", features = ["js"] }
+goat_api = { path = "../goat_api" }
+js-sys = "*"
+serde_json = "*"
+wasm-bindgen = "*"
+wee_alloc = { version = "*", optional = true }
