@@ -146,7 +146,7 @@ pub fn rummy_simple(idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Acti
                 .cloned()
                 .max_by_key(|s| {
                     if *s == rummy.trump.suit() {
-                        return (0, 1);
+                        return (0, 13);
                     }
                     let in_suit = hand.in_suit(*s);
                     if in_suit.is_empty() {
