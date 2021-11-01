@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use log::LevelFilter;
 use rand::RngCore;
 use uuid::Uuid;
 
-use goat_api::{Action, Card, Client, ClientGame, ClientPhase, Event, GoatError, Response, UserId};
+use goat_api::{
+    Action, Card, Client, ClientGame, ClientPhase, Event, GoatError, Response, User, UserId,
+};
 use goat_bot::{Bot, CoverSimple, DuckSimple, PlayTopSimple, Strategy};
 
 use crate::Server;
@@ -14,8 +17,8 @@ fn run_bot<S: Strategy + Send + 'static>(state: Arc<Server>, name: String, strat
     let user_id = UserId(Uuid::new_v4());
     let rx = state.subscribe(user_id, name);
     tokio::spawn(async move {
-        let tx = |user_id, game_id, action| state.apply_action(user_id, game_id, action);
-        let mut bot = Bot::new(user_id, rx, tx, strategy);
+        let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
+        let mut bot = Bot::new(user_id, rx, tx, strategy, |_| Duration::ZERO);
         if let Err(e) = bot.run().await {
             log::error!("Bot {} failed: {}", user_id, e);
         }
@@ -79,9 +82,12 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
     let mut rx = server.subscribe(watcher, "watcher".to_string());
     expect!(
         rx,
-        Response::ChangeName {
+        Response::User {
             user_id: watcher,
-            name: "watcher".to_string()
+            user: User {
+                name: "watcher".to_string(),
+                online: true
+            },
         }
     );
     let cover = run_bot(server.clone(), "cover".to_string(), PlayTopSimple);
@@ -89,17 +95,26 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
     let top = run_bot(server.clone(), "top".to_string(), PlayTopSimple);
     expect!(
         rx,
-        Response::ChangeName {
+        Response::User {
             user_id: cover,
-            name: "cover".to_string()
+            user: User {
+                name: "cover".to_string(),
+                online: true
+            },
         },
-        Response::ChangeName {
+        Response::User {
             user_id: duck,
-            name: "duck".to_string()
+            user: User {
+                name: "duck".to_string(),
+                online: true
+            },
         },
-        Response::ChangeName {
+        Response::User {
             user_id: top,
-            name: "top".to_string()
+            user: User {
+                name: "top".to_string(),
+                online: true
+            },
         }
     );
     let game_id = server.new_game(1);
@@ -244,7 +259,7 @@ async fn test_bots() -> Result<(), GoatError> {
     let server = Arc::new(Server::new());
     let watcher = UserId(Uuid::new_v4());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
-    let mut client = Client::new(());
+    let mut client: Client<(), ()> = Client::new(());
     let cover = run_bot(server.clone(), "cover".to_string(), CoverSimple);
     let duck = run_bot(server.clone(), "duck".to_string(), DuckSimple);
     let top = run_bot(server.clone(), "top".to_string(), PlayTopSimple);
@@ -267,6 +282,7 @@ async fn test_bots() -> Result<(), GoatError> {
             let response = rx.recv().await.unwrap();
             client.apply(response)?;
         }
+        server.forget_old_state(Duration::ZERO, Duration::ZERO);
     }
     log::info!("Goats: {:?}", goat_count);
     Ok(())

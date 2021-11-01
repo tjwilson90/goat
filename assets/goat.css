@@ -1,0 +1,20 @@
+body {
+    background-color: lightblue;
+}
+
+.game,#subscribers {
+    border-style: solid;
+}
+
+#subscribers {
+    display: flex;
+    flex-flow: column;
+}
+
+.name:not(.online) {
+    color: #888;
+}
+
+.name.self {
+    font-weight: bold;
+}

@@ -5,6 +5,7 @@ use smallvec::SmallVec;
 
 use crate::{Card, Cards, Suit};
 
+#[derive(Clone)]
 pub struct RummyTrick {
     plays: SmallVec<[(Card, Card); 12]>,
     num_players: usize,
@@ -16,6 +17,10 @@ impl RummyTrick {
             plays: SmallVec::new(),
             num_players,
         }
+    }
+
+    pub fn plays(&self) -> &[(Card, Card)] {
+        &*self.plays
     }
 
     pub fn top_card(&self) -> Option<Card> {

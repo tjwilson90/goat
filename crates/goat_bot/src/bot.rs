@@ -1,28 +1,40 @@
-use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 
 use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::time::Duration;
 
 use goat_api::{Action, Client, ClientPhase, GameId, GoatError, PlayerIdx, Response, UserId};
 
 use crate::Strategy;
 
 pub struct Bot<Tx, S> {
-    client: Client<()>,
+    client: Client<(), ()>,
     user_id: UserId,
     rx: UnboundedReceiver<Response>,
     tx: Tx,
     strategy: S,
+    sleep: fn(Action) -> Duration,
 }
 
-impl<Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError>, S: Strategy> Bot<Tx, S> {
-    pub fn new(user_id: UserId, rx: UnboundedReceiver<Response>, tx: Tx, strategy: S) -> Self {
+impl<
+        Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError> + Clone + Send + 'static,
+        S: Strategy,
+    > Bot<Tx, S>
+{
+    pub fn new(
+        user_id: UserId,
+        rx: UnboundedReceiver<Response>,
+        tx: Tx,
+        strategy: S,
+        sleep: fn(Action) -> Duration,
+    ) -> Self {
         Self {
             client: Client::new(()),
             user_id,
             rx,
             tx,
             strategy,
+            sleep,
         }
     }
 
@@ -46,18 +58,16 @@ impl<Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError>, S: Strategy> Bot<T
             }
             for game_id in changed.drain() {
                 if let Some(action) = self.action(game_id) {
-                    if let Err(e) = (self.tx)(self.user_id, game_id, action) {
-                        log::warn!(
-                            "Bot {} failed. state={:?}, action={:?}, error={:?}",
-                            self.user_id,
-                            self.client.games.get(&game_id),
-                            action,
-                            e
-                        );
-                    }
-                } else if let Entry::Occupied(game) = self.client.games.entry(game_id) {
-                    if matches!(game.get().phase, ClientPhase::Complete(_)) {
-                        game.remove();
+                    let duration = (self.sleep)(action);
+                    if duration == Duration::ZERO {
+                        let _ = (self.tx)(self.user_id, game_id, action);
+                    } else {
+                        let tx = self.tx.clone();
+                        let user_id = self.user_id;
+                        tokio::spawn(async move {
+                            tokio::time::sleep(duration).await;
+                            let _ = tx(user_id, game_id, action);
+                        });
                     }
                 }
             }
@@ -65,7 +75,7 @@ impl<Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError>, S: Strategy> Bot<T
     }
 
     fn action(&self, game_id: GameId) -> Option<Action> {
-        let game = self.client.games.get(&game_id).unwrap();
+        let game = self.client.games.get(&game_id)?;
         let idx = game.players.iter().position(|id| *id == self.user_id)?;
         let idx = PlayerIdx(idx as u8);
         match &game.phase {

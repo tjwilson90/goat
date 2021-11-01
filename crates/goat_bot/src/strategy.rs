@@ -4,13 +4,16 @@ use goat_api::{
 };
 
 pub trait Strategy {
-    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action>;
+    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action>;
     fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Action;
 }
 
 /// The simplest possible war strategy, never hold any cards in hand and always play from the top
 /// of the deck.
-pub fn war_play_top(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+pub fn war_play_top(
+    idx: PlayerIdx,
+    war: &WarPhase<ClientDeck, ClientWarHand, ()>,
+) -> Option<Action> {
     if war.trick.next_player() == idx {
         Some(Action::PlayTop)
     } else {
@@ -19,7 +22,7 @@ pub fn war_play_top(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -
 }
 
 /// A war strategy that tries to lose every trick.
-pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
     let hand = match &war.hands[idx.idx()] {
         ClientWarHand::Visible(hand) => hand,
         _ => panic!("bot hand is hidden"),
@@ -60,7 +63,7 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Op
 }
 
 /// A war strategy that tries to win every trick.
-pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
     let hand = match &war.hands[idx.idx()] {
         ClientWarHand::Visible(hand) => hand,
         _ => panic!("bot hand is hidden"),
@@ -146,7 +149,7 @@ pub fn rummy_simple(idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Acti
                 .cloned()
                 .max_by_key(|s| {
                     if *s == rummy.trump.suit() {
-                        return (0, 13);
+                        return (0, 100);
                     }
                     let in_suit = hand.in_suit(*s);
                     if in_suit.is_empty() {
@@ -154,7 +157,7 @@ pub fn rummy_simple(idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Acti
                     } else {
                         (
                             distinct_runs(in_suit),
-                            13 - distinct_runs(prev.known.below(in_suit.min())),
+                            100 - distinct_runs(prev.known.below(in_suit.min())),
                         )
                     }
                 })

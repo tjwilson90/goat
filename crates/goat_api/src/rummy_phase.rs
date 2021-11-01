@@ -4,12 +4,13 @@ use smallvec::SmallVec;
 
 use crate::{Card, Cards, Event, GoatError, PlayerIdx, Rank, RummyHand, RummyTrick};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RummyPhase<Hand> {
     pub hands: Box<[Hand]>,
     pub trick: RummyTrick,
     pub next: PlayerIdx,
     pub trump: Card,
+    pub pick_ups: u64,
 }
 
 impl<Hand: RummyHand> RummyPhase<Hand> {
@@ -20,6 +21,7 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
             trick,
             next,
             trump,
+            pick_ups: 0,
         }
     }
 
@@ -39,6 +41,7 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
         let killed = self.trick.play(lo, hi);
         if killed {
             self.trick = Self::new_trick(&*self.hands);
+            self.pick_ups = 0;
         } else {
             self.next = PlayerIdx(self.next.0 + 1);
         }
@@ -46,7 +49,7 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
         Ok(())
     }
 
-    pub fn pick_up(&mut self, player: PlayerIdx) -> Result<(), GoatError> {
+    pub fn pick_up(&mut self, player: PlayerIdx) -> Result<bool, GoatError> {
         if self.next != player {
             return Err(GoatError::NotYourTurn { player });
         }
@@ -56,9 +59,10 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
         if self.trick.is_empty() {
             self.trick = Self::new_trick(&*self.hands);
         }
+        let complete = self.increment_pick_ups(player);
         self.next = PlayerIdx(self.next.0 + 1);
         self.advance_leader();
-        Ok(())
+        Ok(complete)
     }
 
     pub fn is_finished(&self) -> bool {
@@ -77,6 +81,26 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
             next += 1;
         }
         self.next = PlayerIdx(next as u8);
+    }
+
+    pub fn finished_receiving_dreck(&self) -> bool {
+        self.hands.iter().map(|hand| hand.len()).sum::<usize>() % 52 == 51
+    }
+
+    fn increment_pick_ups(&mut self, player: PlayerIdx) -> bool {
+        let pick_ups = (self.pick_ups >> (4 * player.0)) & 0xf;
+        if pick_ups < 10 {
+            self.pick_ups += 1 << (4 * player.0);
+        }
+        if pick_ups == 9 {
+            for i in 0..self.hands.len() {
+                if !self.hands[i].is_empty() && (self.pick_ups >> (4 * i)) & 0xf != 10 {
+                    return false;
+                }
+            }
+            return true;
+        }
+        false
     }
 
     fn new_trick(hands: &[Hand]) -> RummyTrick {
@@ -123,19 +147,19 @@ impl RummyPhase<Cards> {
                 player,
                 dreck: all_dreck,
             });
-            return;
-        }
-        let mut all_dreck: Vec<_> = all_dreck.into_iter().collect();
-        let mut rng = StdRng::seed_from_u64(seed ^ 1);
-        dreck_players.shuffle(&mut rng);
-        all_dreck.shuffle(&mut rng);
-        let mut dreck_players = dreck_players.into_iter();
-        let mut all_dreck = all_dreck.into_iter();
-        while let Some(player) = dreck_players.next() {
-            let len = all_dreck.len() / (1 + dreck_players.len());
-            let dreck = all_dreck.by_ref().take(len).collect();
-            self.hands[player.idx()] += dreck;
-            events.push(Event::ReceiveDreck { player, dreck });
+        } else {
+            let mut all_dreck: Vec<_> = all_dreck.into_iter().collect();
+            let mut rng = StdRng::seed_from_u64(seed ^ 1);
+            dreck_players.shuffle(&mut rng);
+            all_dreck.shuffle(&mut rng);
+            let mut dreck_players = dreck_players.into_iter();
+            let mut all_dreck = all_dreck.into_iter();
+            while let Some(player) = dreck_players.next() {
+                let len = all_dreck.len() / (1 + dreck_players.len());
+                let dreck = all_dreck.by_ref().take(len).collect();
+                self.hands[player.idx()] += dreck;
+                events.push(Event::ReceiveDreck { player, dreck });
+            }
         }
         self.advance_leader();
     }

@@ -1,13 +1,13 @@
 [package]
 name = "goat_api"
 version = "0.0.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 parking_lot = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
-smallvec = { version = "*", features = ["union"] }
+smallvec = { version = "*", features = ["serde", "union"] }
 thiserror = "*"
 uuid = { version = "*", features = ["serde", "v4"] }
 

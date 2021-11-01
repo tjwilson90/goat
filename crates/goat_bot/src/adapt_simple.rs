@@ -7,7 +7,7 @@ use crate::{strategy, Strategy};
 pub struct AdaptSimple;
 
 impl Strategy for AdaptSimple {
-    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
         if war.hands.len() < 4 {
             strategy::war_duck(idx, war)
         } else {

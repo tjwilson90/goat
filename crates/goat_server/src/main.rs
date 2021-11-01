@@ -1,5 +1,6 @@
 use futures_util::StreamExt;
 use rand::RngCore;
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use tokio::time;
 use tokio::time::Duration;
@@ -21,7 +22,7 @@ mod subscriber;
 mod test;
 
 fn user_id() -> impl Filter<Extract = (UserId,), Error = Rejection> + Clone {
-    warp::cookie("USER_ID").map(|id: String| {
+    warp::cookie("USER_SECRET").map(|id: String| {
         let hash = Sha256::digest(id.as_bytes());
         UserId(Uuid::from_slice(&hash[..16]).unwrap())
     })
@@ -69,15 +70,19 @@ fn change_name(
 fn apply_action(
     state: &'static Server,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    #[derive(Deserialize)]
+    struct Wrapper {
+        game_id: GameId,
+    }
     async fn handle(
         state: &Server,
         user_id: UserId,
-        game_id: GameId,
+        Wrapper { game_id }: Wrapper,
         action: Action,
     ) -> Result<impl Reply, Rejection> {
         state
             .apply_action(user_id, game_id, action)
-            .map_err(|e| Error::from(e))?;
+            .map_err(Error::from)?;
         Ok(warp::reply())
     }
     warp::path!("apply_action")
@@ -97,7 +102,11 @@ fn subscribe(
         let rx = UnboundedReceiverStream::new(rx);
         let stream = rx
             .map(|response| Ok::<_, GoatError>(sse::Event::default().json_data(response).unwrap()));
-        sse::reply(stream)
+        warp::reply::with_header(
+            sse::reply(stream),
+            "Set-Cookie",
+            format!("USER_ID={}", user_id),
+        )
     }
     warp::path!("subscribe")
         .and(warp::get())
@@ -109,10 +118,19 @@ fn subscribe(
 
 fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
-        let user_id = UserId(Uuid::new_v4());
+        let hash = Sha256::digest(name.as_bytes());
+        let user_id = UserId(Uuid::from_slice(&hash[16..]).unwrap());
         let rx = state.subscribe(user_id, name);
-        let tx = |user_id, game_id, action| state.apply_action(user_id, game_id, action);
-        let mut bot = Bot::new(user_id, rx, tx, strategy);
+        let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
+        let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {
+            Action::PlayCard { .. }
+            | Action::PlayTop
+            | Action::Slough { .. }
+            | Action::PlayRun { .. }
+            | Action::PickUp => Duration::from_secs(2),
+            Action::Draw => Duration::from_millis(200),
+            _ => Duration::ZERO,
+        });
         if let Err(e) = bot.run().await {
             log::error!("Bot {} failed: {}", user_id, e);
         }
@@ -136,7 +154,10 @@ async fn main() {
         let mut ticker = time::interval(Duration::from_secs(10 * 60));
         loop {
             ticker.tick().await;
-            state.drop_old_games();
+            state.forget_old_state(
+                Duration::from_secs(18 * 60 * 60),
+                Duration::from_secs(30 * 60),
+            );
         }
     });
 

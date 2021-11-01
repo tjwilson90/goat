@@ -18,8 +18,10 @@ pub enum GoatError {
     InvalidAction,
     #[error("{game_id} is not a valid game id")]
     InvalidGame { game_id: GameId },
-    #[error("At least one deck and at most three decks can be used")]
+    #[error("Games require at least one deck and can be played with at most three decks")]
     InvalidNumberOfDecks,
+    #[error("Games require at least 3 players and can be played with at most 16 players")]
+    InvalidNumberOfPlayers,
     #[error("User {user_id} is not a real player in the game")]
     InvalidPlayer { user_id: UserId },
     #[error("The cards {lo} to {hi} do not form a valid range")]
@@ -33,6 +35,4 @@ pub enum GoatError {
     NotYourCard { card: Card },
     #[error("It is not player {player}'s turn")]
     NotYourTurn { player: PlayerIdx },
-    #[error("At most 16 players can play in the same game")]
-    TooManyPlayers,
 }

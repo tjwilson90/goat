@@ -2,24 +2,24 @@ use std::fmt::Debug;
 
 use crate::{
     Cards, ClientDeck, ClientRummyHand, ClientWarHand, Event, GoatError, PlayerIdx, Rank,
-    RummyPhase, UserId, WarHand, WarPhase, WarTrick,
+    RummyPhase, Slot, UserId, WarHand, WarPhase, WarPlayKind, WarTrick,
 };
 
-#[derive(Debug)]
-pub struct ClientGame {
-    pub phase: ClientPhase,
+#[derive(Clone, Debug)]
+pub struct ClientGame<PrevTrick> {
+    pub phase: ClientPhase<PrevTrick>,
     pub players: Vec<UserId>,
 }
 
-#[derive(Debug)]
-pub enum ClientPhase {
+#[derive(Clone, Debug)]
+pub enum ClientPhase<PrevTrick> {
     Unstarted,
-    War(WarPhase<ClientDeck, ClientWarHand>),
+    War(WarPhase<ClientDeck, ClientWarHand, PrevTrick>),
     Rummy(RummyPhase<ClientRummyHand>),
     Complete(PlayerIdx),
 }
 
-impl ClientGame {
+impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
     pub fn new() -> Self {
         Self {
             phase: ClientPhase::Unstarted,
@@ -33,7 +33,7 @@ impl ClientGame {
                 self.players.push(user_id);
             }
             Event::Leave { player } => {
-                self.players.swap_remove(player.0 as usize);
+                self.players.swap_remove(player.idx());
             }
             Event::Start { num_decks } => {
                 let num_players = self.players.len();
@@ -42,6 +42,7 @@ impl ClientGame {
                     hands: vec![ClientWarHand::new(); num_players].into_boxed_slice(),
                     won: vec![Cards::NONE; num_players].into_boxed_slice(),
                     trick: WarTrick::new(PlayerIdx(0), num_players),
+                    prev_trick: Default::default(),
                 })
             }
             Event::PlayCard { card } => {
@@ -49,12 +50,12 @@ impl ClientGame {
                 let player = war.trick.next_player();
                 let hand = &mut war.hands[player.idx()];
                 *hand -= card;
-                war.play(card);
+                war.play(WarPlayKind::PlayHand, card);
             }
             Event::PlayTop { card } => {
                 let war = self.war()?;
                 war.deck.draw();
-                war.play(card);
+                war.play(WarPlayKind::PlayTop, card);
             }
             Event::Slough { player, card } => {
                 let war = self.war()?;
@@ -78,10 +79,12 @@ impl ClientGame {
                 let rummy = self.rummy()?;
                 let hand = &mut rummy.hands[player.idx()];
                 *hand += dreck;
+                if rummy.finished_receiving_dreck() {
+                    rummy.advance_leader();
+                }
             }
             Event::PlayRun { lo, hi } => {
                 let rummy = self.rummy()?;
-                rummy.advance_leader();
                 rummy.play_run(rummy.next, lo, hi)?;
                 if rummy.is_finished() {
                     self.phase = ClientPhase::Complete(rummy.next);
@@ -89,8 +92,10 @@ impl ClientGame {
             }
             Event::PickUp => {
                 let rummy = self.rummy()?;
-                rummy.advance_leader();
-                rummy.pick_up(rummy.next)?;
+                let player = rummy.next;
+                if rummy.pick_up(player)? {
+                    self.phase = ClientPhase::Complete(player);
+                }
             }
             Event::RedactedDraw { player } => {
                 let war = self.war()?;
@@ -111,12 +116,15 @@ impl ClientGame {
                 let rummy = self.rummy()?;
                 let hand = &mut rummy.hands[player.idx()];
                 hand.unknown += dreck;
+                if rummy.finished_receiving_dreck() {
+                    rummy.advance_leader();
+                }
             }
         }
         Ok(())
     }
 
-    fn war(&mut self) -> Result<&mut WarPhase<ClientDeck, ClientWarHand>, GoatError> {
+    fn war(&mut self) -> Result<&mut WarPhase<ClientDeck, ClientWarHand, PrevTrick>, GoatError> {
         match &mut self.phase {
             ClientPhase::War(war) => Ok(war),
             _ => Err(GoatError::InvalidAction),

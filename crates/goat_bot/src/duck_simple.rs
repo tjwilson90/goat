@@ -7,7 +7,7 @@ use crate::{strategy, Strategy};
 pub struct DuckSimple;
 
 impl Strategy for DuckSimple {
-    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
         strategy::war_duck(idx, war)
     }
 

@@ -4,7 +4,7 @@ use std::{fmt, mem};
 
 use smallvec::SmallVec;
 
-use crate::{Card, Cards, PlayerIdx, Rank};
+use crate::{Card, Cards, PlayerIdx, Rank, WarPlay, WarPlayKind};
 
 static PLAYERS: &[PlayerIdx] = &[
     PlayerIdx(0),
@@ -25,12 +25,13 @@ static PLAYERS: &[PlayerIdx] = &[
     PlayerIdx(15),
 ];
 
+#[derive(Clone)]
 pub struct WarTrick {
     next: u8,
     rank: Rank,
     players: SmallVec<[PlayerIdx; 16]>,
     winners: SmallVec<[PlayerIdx; 16]>,
-    plays: SmallVec<[(PlayerIdx, Card); 12]>,
+    plays: SmallVec<[WarPlay; 12]>,
 }
 
 impl WarTrick {
@@ -51,7 +52,9 @@ impl WarTrick {
         if self.rank() == Some(card.rank()) {
             !self.players[self.next as usize..].contains(&player)
         } else {
-            self.plays.iter().any(|(_, c)| c.rank() == card.rank())
+            self.plays
+                .iter()
+                .any(|play| play.card.rank() == card.rank())
         }
     }
 
@@ -79,7 +82,7 @@ impl WarTrick {
         }
     }
 
-    pub fn play(&mut self, card: Card) {
+    pub fn play(&mut self, kind: WarPlayKind, card: Card) {
         let player = self.players[self.next as usize];
         self.next += 1;
         match card.rank().cmp(&self.rank) {
@@ -96,19 +99,20 @@ impl WarTrick {
             self.next = 0;
             self.rank = Rank::Two;
         }
-        self.plays.push((player, card));
+        self.plays.push(WarPlay::new(player, kind, card));
     }
 
     pub fn slough(&mut self, player: PlayerIdx, card: Card) {
-        self.plays.push((player, card));
+        self.plays
+            .push(WarPlay::new(player, WarPlayKind::Slough, card));
     }
 
-    pub fn plays(&self) -> impl Iterator<Item = Card> + '_ {
-        self.plays.iter().map(|(_, c)| c).cloned()
+    pub fn cards(&self) -> impl Iterator<Item = Card> + '_ {
+        self.plays.iter().map(|p| p.card)
     }
 
-    pub fn players_and_plays(&self) -> impl Iterator<Item = (PlayerIdx, Card)> + '_ {
-        self.plays.iter().cloned()
+    pub fn plays(&self) -> &[WarPlay] {
+        &*self.plays
     }
 }
 
@@ -122,7 +126,7 @@ impl Debug for WarTrick {
             f.field("winners", &self.winners);
         }
         if !self.plays.is_empty() {
-            f.field("cards", &self.plays().collect::<Cards>());
+            f.field("cards", &self.cards().collect::<Cards>());
         }
         f.finish()
     }

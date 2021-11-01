@@ -6,7 +6,8 @@ use itertools::Itertools;
 
 use crate::{
     Card, Cards, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, PlayerIdx, Rank,
-    RummyPhase, RummyTrick, ServerGame, ServerPhase, ServerWarHand, Suit, WarPhase, WarTrick,
+    RummyPhase, RummyTrick, ServerGame, ServerPhase, ServerWarHand, Suit, WarPhase, WarPlayKind,
+    WarTrick,
 };
 
 macro_rules! c {
@@ -151,7 +152,7 @@ fn cards_contains_all() {
 #[test]
 fn war_trick_rank_winner_next() {
     fn next(t: &mut WarTrick, c: Card) -> (Option<Rank>, Option<u8>, u8) {
-        t.play(c);
+        t.play(WarPlayKind::PlayHand, c);
         (t.rank(), t.winner().map(|i| i.0), t.next_player().0)
     }
     let mut t = WarTrick::new(PlayerIdx(1), 4);
@@ -176,7 +177,7 @@ fn war_trick_can_slough() {
             assert!(!t.can_slough(PlayerIdx(player), card));
         }
     }
-    t.play(Card::TwoClubs);
+    t.play(WarPlayKind::PlayHand, Card::TwoClubs);
     for card in Cards::ONE_DECK {
         for player in 0..num_players {
             assert_eq!(
@@ -185,7 +186,7 @@ fn war_trick_can_slough() {
             );
         }
     }
-    t.play(Card::FiveClubs);
+    t.play(WarPlayKind::PlayHand, Card::FiveClubs);
     for card in Cards::ONE_DECK {
         for player in 0..num_players {
             assert_eq!(
@@ -195,7 +196,7 @@ fn war_trick_can_slough() {
             );
         }
     }
-    t.play(Card::FiveDiamonds);
+    t.play(WarPlayKind::PlayHand, Card::FiveDiamonds);
     for card in Cards::ONE_DECK {
         for player in 0..num_players {
             assert_eq!(
@@ -204,7 +205,7 @@ fn war_trick_can_slough() {
             );
         }
     }
-    t.play(Card::ThreeClubs);
+    t.play(WarPlayKind::PlayHand, Card::ThreeClubs);
     for card in Cards::ONE_DECK {
         for player in 0..num_players {
             assert_eq!(
@@ -245,14 +246,17 @@ fn rummy_trick() {
 
 #[test]
 fn size_of() {
-    assert_eq!(mem::size_of::<ClientGame>(), 160);
-    assert_eq!(mem::size_of::<ClientPhase>(), 136);
-    assert_eq!(mem::size_of::<WarPhase<u8, ClientWarHand>>(), 128);
+    assert_eq!(mem::size_of::<ClientGame<()>>(), 160);
+    assert_eq!(mem::size_of::<ClientPhase<()>>(), 136);
+    assert_eq!(mem::size_of::<WarPhase<u8, ClientWarHand, ()>>(), 128);
     assert_eq!(mem::size_of::<WarTrick>(), 88);
-    assert_eq!(mem::size_of::<RummyPhase<ClientRummyHand>>(), 64);
+    assert_eq!(mem::size_of::<RummyPhase<ClientRummyHand>>(), 72);
 
     assert_eq!(mem::size_of::<ServerGame>(), 208);
     assert_eq!(mem::size_of::<ServerPhase>(), 152);
-    assert_eq!(mem::size_of::<WarPhase<Vec<Card>, ServerWarHand>>(), 144);
-    assert_eq!(mem::size_of::<RummyPhase<Cards>>(), 64);
+    assert_eq!(
+        mem::size_of::<WarPhase<Vec<Card>, ServerWarHand, ()>>(),
+        144
+    );
+    assert_eq!(mem::size_of::<RummyPhase<Cards>>(), 72);
 }

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use crate::{ClientGame, GameId, GoatError, Response, UserDb};
+use crate::{ClientGame, GameId, GoatError, Response, Slot, UserDb, WarTrick};
 
-pub struct Client<U> {
-    pub games: HashMap<GameId, ClientGame>,
-    pub users: U,
+pub struct Client<Users, PrevTrick> {
+    pub games: HashMap<GameId, ClientGame<PrevTrick>>,
+    pub users: Users,
 }
 
-impl<U: UserDb> Client<U> {
-    pub fn new(users: U) -> Self {
+impl<Users: UserDb, PrevTrick: Slot<WarTrick>> Client<Users, PrevTrick> {
+    pub fn new(users: Users) -> Self {
         Self {
             games: HashMap::new(),
             users,
@@ -29,13 +29,13 @@ impl<U: UserDb> Client<U> {
                 Some(game) => game.apply(event)?,
                 None => return Err(GoatError::InvalidGame { game_id }),
             },
-            Response::Forget { game_id } => {
+            Response::ForgetGame { game_id } => {
                 self.games.remove(&game_id);
             }
-            Response::ChangeName { user_id, name } => {
-                self.users.insert(user_id, name);
+            Response::User { user_id, user } => {
+                self.users.insert(user_id, user);
             }
-            Response::Disconnect { user_id } => {
+            Response::ForgetUser { user_id } => {
                 self.users.remove(&user_id);
             }
         }

@@ -2,7 +2,7 @@ use rand::prelude::{SeedableRng, SliceRandom, StdRng};
 
 use crate::{
     Action, Card, Cards, Event, GoatError, PlayerIdx, RummyPhase, ServerWarHand, UserId, WarHand,
-    WarPhase, WarTrick,
+    WarPhase, WarPlayKind, WarTrick,
 };
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct ServerGame {
 #[derive(Debug)]
 pub enum ServerPhase {
     Unstarted,
-    War(WarPhase<Vec<Card>, ServerWarHand>),
+    War(WarPhase<Vec<Card>, ServerWarHand, ()>),
     Rummy(RummyPhase<Cards>),
     Complete(PlayerIdx),
 }
@@ -37,8 +37,8 @@ impl ServerGame {
     pub fn new(seed: u64) -> Self {
         Self {
             phase: ServerPhase::Unstarted,
-            players: Vec::new(),
-            events: Vec::new(),
+            players: Vec::with_capacity(4),
+            events: Vec::with_capacity(128),
             seed,
         }
     }
@@ -46,15 +46,12 @@ impl ServerGame {
     pub fn player(&self, user_id: UserId) -> Result<PlayerIdx, GoatError> {
         match self.players.iter().position(|p| *p == user_id) {
             Some(idx) => Ok(PlayerIdx(idx as u8)),
-            None => return Err(GoatError::InvalidPlayer { user_id }),
+            None => Err(GoatError::InvalidPlayer { user_id }),
         }
     }
 
     pub fn started(&self) -> bool {
-        match self.phase {
-            ServerPhase::Unstarted => false,
-            _ => true,
-        }
+        !matches!(self.phase, ServerPhase::Unstarted)
     }
 
     pub fn complete(&self) -> Option<PlayerIdx> {
@@ -71,10 +68,7 @@ impl ServerGame {
                     ServerPhase::Unstarted => {}
                     _ => return Err(GoatError::InvalidAction),
                 }
-                if let Err(_) = self.player(user_id) {
-                    if self.players.len() == 16 {
-                        return Err(GoatError::TooManyPlayers);
-                    }
+                if self.player(user_id).is_err() {
                     self.players.push(user_id);
                     self.events.push(Event::Join { user_id });
                 }
@@ -92,7 +86,10 @@ impl ServerGame {
                     ServerPhase::Unstarted => {}
                     _ => return Err(GoatError::InvalidAction),
                 }
-                if num_decks < 1 || num_decks > 3 {
+                if !(3..=15).contains(&self.players.len()) {
+                    return Err(GoatError::InvalidNumberOfPlayers);
+                }
+                if !(1..=3).contains(&num_decks) {
                     return Err(GoatError::InvalidNumberOfDecks);
                 }
                 let num_players = self.players.len();
@@ -103,6 +100,7 @@ impl ServerGame {
                     hands: vec![ServerWarHand::new(); num_players].into_boxed_slice(),
                     won: vec![Cards::NONE; num_players].into_boxed_slice(),
                     trick: WarTrick::new(PlayerIdx(0), num_players),
+                    prev_trick: (),
                 });
                 self.events.push(Event::Start { num_decks });
             }
@@ -120,7 +118,7 @@ impl ServerGame {
                     }
                 }
                 *hand -= card;
-                war.play(card);
+                war.play(WarPlayKind::PlayHand, card);
                 events.push(Event::PlayCard { card });
                 switch_if_finished!(self, war, events, seed);
             }
@@ -140,7 +138,7 @@ impl ServerGame {
                     return Err(GoatError::CannotPlayFromEmptyDeck);
                 }
                 let card = war.deck.pop().unwrap();
-                war.play(card);
+                war.play(WarPlayKind::PlayTop, card);
                 events.push(Event::PlayTop { card });
                 switch_if_finished!(self, war, events, seed);
             }
@@ -178,7 +176,9 @@ impl ServerGame {
             Action::PickUp => {
                 let player = self.player(user_id)?;
                 let (rummy, events) = self.rummy()?;
-                rummy.pick_up(player)?;
+                if rummy.pick_up(player)? {
+                    self.phase = ServerPhase::Complete(player);
+                }
                 events.push(Event::PickUp);
             }
         };
@@ -189,7 +189,7 @@ impl ServerGame {
         &mut self,
     ) -> Result<
         (
-            &mut WarPhase<Vec<Card>, ServerWarHand>,
+            &mut WarPhase<Vec<Card>, ServerWarHand, ()>,
             &mut Vec<Event>,
             u64,
         ),

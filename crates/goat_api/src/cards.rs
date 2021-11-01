@@ -92,10 +92,12 @@ impl Cards {
     }
 
     pub fn max(self) -> Card {
+        debug_assert!(!self.is_empty());
         Card::from((63 - self.bits.leading_zeros() / 2) as u8)
     }
 
     pub fn min(self) -> Card {
+        debug_assert!(!self.is_empty());
         Card::from((self.bits.trailing_zeros() / 2) as u8)
     }
 
@@ -212,7 +214,7 @@ impl Add<Cards> for Cards {
         let sum = Cards {
             bits: self.bits + rhs.bits,
         };
-        debug_assert!(sum.len() == self.len() + rhs.len());
+        debug_assert_eq!(sum.len(), self.len() + rhs.len());
         sum
     }
 }

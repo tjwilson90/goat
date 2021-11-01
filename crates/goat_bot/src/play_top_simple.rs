@@ -7,7 +7,7 @@ use crate::{strategy, Strategy};
 pub struct PlayTopSimple;
 
 impl Strategy for PlayTopSimple {
-    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
         strategy::war_play_top(idx, war)
     }
 

@@ -7,12 +7,18 @@ use crate::{Card, Cards, GoatError};
 pub trait RummyHand: AddAssign<Card> + AddAssign<Cards> + SubAssign<Cards> {
     fn is_empty(&self) -> bool;
 
+    fn len(&self) -> usize;
+
     fn check_can_play(&self, lo: Card, hi: Card) -> Result<(), GoatError>;
 }
 
 impl RummyHand for Cards {
     fn is_empty(&self) -> bool {
         Cards::is_empty(*self)
+    }
+
+    fn len(&self) -> usize {
+        Cards::len(*self)
     }
 
     fn check_can_play(&self, lo: Card, hi: Card) -> Result<(), GoatError> {
@@ -28,6 +34,7 @@ impl RummyHand for Cards {
     }
 }
 
+#[derive(Clone)]
 pub struct ClientRummyHand {
     pub known: Cards,
     pub unknown: u8,
@@ -36,6 +43,10 @@ pub struct ClientRummyHand {
 impl RummyHand for ClientRummyHand {
     fn is_empty(&self) -> bool {
         self.known.is_empty() && self.unknown == 0
+    }
+
+    fn len(&self) -> usize {
+        self.known.len() + self.unknown as usize
     }
 
     fn check_can_play(&self, _: Card, _: Card) -> Result<(), GoatError> {

@@ -13,11 +13,14 @@ pub use rummy_hand::*;
 pub use rummy_phase::*;
 pub use rummy_trick::*;
 pub use server_game::*;
+pub use slot::*;
 pub use suit::*;
+pub use user::*;
 pub use user_db::*;
 pub use war_hand::*;
 pub use war_phase::*;
 pub use war_trick::*;
+pub use war_trick_play::*;
 
 mod action;
 mod card;
@@ -34,11 +37,14 @@ mod rummy_hand;
 mod rummy_phase;
 mod rummy_trick;
 mod server_game;
+mod slot;
 mod suit;
+mod user;
 mod user_db;
 mod war_hand;
 mod war_phase;
 mod war_trick;
+mod war_trick_play;
 
 #[cfg(test)]
 mod test;

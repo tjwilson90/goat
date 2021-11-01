@@ -1,13 +1,21 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Event, GameId, UserId};
+use crate::{Event, GameId, User, UserId};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum Response {
+    #[serde(rename_all = "camelCase")]
     Ping,
+    #[serde(rename_all = "camelCase")]
     Replay { game_id: GameId, events: Vec<Event> },
+    #[serde(rename_all = "camelCase")]
     Game { game_id: GameId, event: Event },
-    Forget { game_id: GameId },
-    ChangeName { user_id: UserId, name: String },
-    Disconnect { user_id: UserId },
+    #[serde(rename_all = "camelCase")]
+    ForgetGame { game_id: GameId },
+    #[serde(rename_all = "camelCase")]
+    User { user_id: UserId, user: User },
+    #[serde(rename_all = "camelCase")]
+    ForgetUser { user_id: UserId },
 }

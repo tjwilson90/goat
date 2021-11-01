@@ -2,6 +2,8 @@ use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Write};
 use std::{fmt, mem};
 
+use serde::{Serialize, Serializer};
+
 use crate::{Card, Suit};
 
 const RANKS: [char; 13] = [
@@ -72,5 +74,14 @@ impl Display for Rank {
 impl Debug for Rank {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(self, f)
+    }
+}
+
+impl Serialize for Rank {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_char(self.char())
     }
 }

@@ -7,7 +7,7 @@ use crate::{strategy, Strategy};
 pub struct CoverSimple;
 
 impl Strategy for CoverSimple {
-    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand>) -> Option<Action> {
+    fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
         strategy::war_cover(idx, war)
     }
 

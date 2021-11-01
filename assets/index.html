@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Goat</title>
-    <script type="module" src="./assets/goat.js"></script>
+    <script type="module" src="assets/goat.js"></script>
+    <script type="module" src="assets/wasm/goat_wasm.js"></script>
+    <link rel="stylesheet" href="assets/goat.css">
 </head>
 <body>
-    <input type="text" id="name" placeholder="Name">
-    <script type="module">
-        import init from './assets/wasm/goat_wasm.js';
-        await init();
-        start();
-    </script>
+    <input type="text" id="name" autocomplete="off" placeholder="Change Name...">
+    <button type="button" id="new-game">New Game</button>
+    <ul id="subscribers" class="sorted-users"></ul>
+    <div id="games"></div>
 </body>
 </html>

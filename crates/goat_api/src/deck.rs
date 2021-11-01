@@ -13,6 +13,7 @@ impl Deck for Vec<Card> {
     }
 }
 
+#[derive(Clone)]
 pub struct ClientDeck(u8);
 
 impl ClientDeck {
@@ -24,8 +25,8 @@ impl ClientDeck {
         self.0 -= 1;
     }
 
-    pub fn len(&self) -> usize {
-        (self.0 - 1) as usize
+    pub fn len(&self) -> u8 {
+        self.0 - 1
     }
 }
 

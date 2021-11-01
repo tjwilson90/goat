@@ -1,8 +1,10 @@
 use wasm_bindgen::prelude::*;
 
-pub use state::*;
+pub use client::*;
+pub use game::*;
 
-mod state;
+mod client;
+mod game;
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]

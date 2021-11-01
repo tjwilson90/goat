@@ -1,7 +1,7 @@
 [package]
 name = "goat_server"
 version = "0.0.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 env_logger = "*"
@@ -9,11 +9,12 @@ futures-util = "*"
 goat_api = { path = "../goat_api" }
 goat_bot = { path = "../goat_bot" }
 log = "*"
-parking_lot = { version = "*", features = ["deadlock_detection"] }
+parking_lot = "*"
 rand = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sha2 = { version = "*", features = ["asm"] }
+smallvec = { version = "*", features = ["union"] }
 thiserror = "*"
 tokio = { version = "*", features = ["macros", "parking_lot", "rt-multi-thread", "sync", "time"] }
 tokio-stream = "*"
