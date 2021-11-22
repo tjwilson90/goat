@@ -55,6 +55,7 @@ jobs:
           source: build/goat.tgz
           target: /opt
           overwrite: true
+          strip_components: 1
 
       - name: Run dist
         if: github.ref == 'refs/heads/develop'
