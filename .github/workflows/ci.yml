@@ -1,0 +1,74 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install musl
+        run: sudo apt-get install musl-tools
+
+      - name: Add rust target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Cargo test
+        run: cargo test --target x86_64-unknown-linux-musl
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install musl
+        run: sudo apt-get install musl-tools
+
+      - name: Add rust target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Cargo build
+        run: cargo build --target x86_64-unknown-linux-musl --release
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.3.0
+        with:
+          version: 'latest'
+
+      - name: Run wasm-pack
+        run: wasm-pack build crates/goat_wasm --target web --no-typescript
+
+      - name: Make dist
+        run: ./scripts/make-dist.sh
+
+      - name: Deploy dist
+        if: github.ref == 'refs/heads/develop'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: build/goat.tgz
+          target: /opt
+          overwrite: true
+
+      - name: Run dist
+        if: github.ref == 'refs/heads/develop'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: /opt/deploy-goat.sh
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v1
+        with:
+          name: goat.tgz
+          path: build/goat.tgz
