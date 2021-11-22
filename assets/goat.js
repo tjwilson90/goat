@@ -747,6 +747,12 @@ function applyAction(gameId, action) {
     });
 }
 
+function signalUpdate() {
+    if (document.visibilityState !== "visible") {
+        document.title = "* Goat";
+    }
+}
+
 document.getElementById("name").addEventListener("change", (event) => {
     if (event.target.value) {
         document.cookie = "USER_NAME=" + event.target.value;
@@ -757,6 +763,12 @@ document.getElementById("name").addEventListener("change", (event) => {
 
 document.getElementById("new-game").addEventListener("click", (event) => {
     fetch("./new_game", { method: "POST" });
+});
+
+document.addEventListener("visibilitychange", (event) => {
+    if (document.visibilityState === "visible") {
+        document.title = "Goat";
+    }
 });
 
 if (getCookie("USER_SECRET") === null) {
@@ -775,6 +787,7 @@ new EventSource("./subscribe").onmessage = function(event) {
     switch (response.type) {
         case "game":
             updateGame(response.gameId, false);
+            signalUpdate();
             break;
         case "replay":
             updateGame(response.gameId, true);
@@ -784,6 +797,7 @@ new EventSource("./subscribe").onmessage = function(event) {
             break;
         case "user":
             updateUser(response.userId, response.user);
+            signalUpdate();
             break;
         case "forgetUser":
             forgetUser(response.userId);

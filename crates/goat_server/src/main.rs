@@ -162,8 +162,9 @@ async fn main() {
         loop {
             ticker.tick().await;
             state.forget_old_state(
-                Duration::from_secs(18 * 60 * 60),
                 Duration::from_secs(30 * 60),
+                Duration::from_secs(18 * 60 * 60),
+                Duration::from_secs(5 * 60),
             );
         }
     });

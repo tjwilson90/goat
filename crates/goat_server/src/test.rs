@@ -285,7 +285,7 @@ async fn test_bots() -> Result<(), GoatError> {
             let response = rx.recv().await.unwrap();
             client.apply(response)?;
         }
-        server.forget_old_state(Duration::ZERO, Duration::ZERO);
+        server.forget_old_state(Duration::ZERO, Duration::ZERO, Duration::ZERO);
     }
     log::info!("Goats: {:?}", goat_count);
     Ok(())

@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
 use uuid::Uuid;
 
-use goat_api::{Action, Event, GameId, GoatError, Response, ServerGame, User, UserId};
+use goat_api::{Action, Event, GameId, GoatError, Response, ServerGame, ServerPhase, User, UserId};
 
 use crate::Subscriber;
 
@@ -157,14 +157,24 @@ impl Server {
         broadcast(&mut *users, [Response::Ping].iter().cloned());
     }
 
-    pub fn forget_old_state(&self, max_age: Duration, complete_age: Duration) {
+    pub fn forget_old_state(
+        &self,
+        unstarted_age: Duration,
+        started_age: Duration,
+        complete_age: Duration,
+    ) {
         let mut players = HashSet::new();
         let mut drops = Vec::new();
         let mut games = self.games.write();
         games.retain(|game_id, game| {
             let (game, last_updated) = &*game.lock();
             let elapsed = last_updated.elapsed();
-            let drop = elapsed > max_age || (elapsed > complete_age && !game.active());
+            let drop = elapsed
+                > match game.phase {
+                    ServerPhase::Unstarted => unstarted_age,
+                    ServerPhase::War(_) | ServerPhase::Rummy(_) => started_age,
+                    ServerPhase::Goat(_) => complete_age,
+                };
             if drop {
                 drops.push(*game_id);
             } else {
