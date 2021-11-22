@@ -279,7 +279,7 @@ async fn test_bots() -> Result<(), GoatError> {
                 ..
             }) = client.games.get(&game_id)
             {
-                *goat_count.entry(*goat).or_insert(0) += 1;
+                *goat_count.entry(goat.goat).or_insert(0) += 1;
                 break;
             }
             let response = rx.recv().await.unwrap();
