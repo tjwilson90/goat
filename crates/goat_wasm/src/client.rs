@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use js_sys::Array;
 use wasm_bindgen::prelude::*;
 
-use goat_api::{Response, User, UserId, WarTrick};
+use goat_api::{Cards, ClientPhase, Response, User, UserId, WarTrick};
 
-use crate::WasmGame;
+use crate::{OneAction, Wrapper};
 
 #[wasm_bindgen]
 pub struct Client {
-    client: goat_api::Client<HashMap<UserId, User>, Option<WarTrick>>,
+    client: goat_api::Client<HashMap<UserId, User>, Option<WarTrick>, OneAction>,
 }
 
 #[wasm_bindgen]
@@ -42,7 +42,7 @@ impl Client {
     pub fn game(&self, game_id: JsValue) -> Result<JsValue, JsValue> {
         let game_id = serde_wasm_bindgen::from_value(game_id)?;
         match self.client.games.get(&game_id) {
-            Some(game) => Ok(serde_wasm_bindgen::to_value(&WasmGame::new(game))?),
+            Some(game) => Ok(serde_wasm_bindgen::to_value(&Wrapper(game))?),
             None => Err(JsValue::from(format!("Unknown game {}", game_id))),
         }
     }
@@ -63,5 +63,26 @@ impl Client {
             Some(user) => Ok(serde_wasm_bindgen::to_value(user)?),
             None => Err(JsValue::from(format!("Unknown user {}", user_id))),
         }
+    }
+
+    #[wasm_bindgen(js_name = handContainsRange)]
+    pub fn hand_contains_range(
+        &self,
+        game_id: JsValue,
+        player_id: JsValue,
+        lo: JsValue,
+        hi: JsValue,
+    ) -> Result<bool, JsValue> {
+        let game_id = serde_wasm_bindgen::from_value(game_id)?;
+        let player_id: usize = serde_wasm_bindgen::from_value(player_id)?;
+        let lo = serde_wasm_bindgen::from_value(lo)?;
+        let hi = serde_wasm_bindgen::from_value(hi)?;
+        if let Some(game) = self.client.games.get(&game_id) {
+            if let ClientPhase::Rummy(rummy) = &game.phase {
+                let hand = rummy.hands[player_id].known;
+                return Ok(hand.contains_all(Cards::range(lo, hi)));
+            }
+        }
+        Ok(false)
     }
 }

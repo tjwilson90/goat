@@ -1,8 +1,8 @@
 use rand::prelude::{SeedableRng, SliceRandom, StdRng};
 
 use crate::{
-    Action, Card, Cards, Event, GoatError, PlayerIdx, RummyPhase, ServerWarHand, UserId, WarHand,
-    WarPhase, WarPlayKind, WarTrick,
+    Action, Card, Cards, Event, GoatError, GoatPhase, PlayerIdx, RummyPhase, ServerWarHand, UserId,
+    WarHand, WarPhase, WarTrick,
 };
 
 #[derive(Debug)]
@@ -17,8 +17,8 @@ pub struct ServerGame {
 pub enum ServerPhase {
     Unstarted,
     War(WarPhase<Vec<Card>, ServerWarHand, ()>),
-    Rummy(RummyPhase<Cards>),
-    Complete(PlayerIdx),
+    Rummy(RummyPhase<Cards, ()>),
+    Goat(GoatPhase),
 }
 
 macro_rules! switch_if_finished {
@@ -50,15 +50,8 @@ impl ServerGame {
         }
     }
 
-    pub fn started(&self) -> bool {
-        !matches!(self.phase, ServerPhase::Unstarted)
-    }
-
-    pub fn complete(&self) -> Option<PlayerIdx> {
-        match self.phase {
-            ServerPhase::Complete(player) => Some(player),
-            _ => None,
-        }
+    pub fn active(&self) -> bool {
+        matches!(self.phase, ServerPhase::War(_) | ServerPhase::Rummy(_))
     }
 
     pub fn apply(&mut self, user_id: UserId, action: Action) -> Result<(), GoatError> {
@@ -107,45 +100,31 @@ impl ServerGame {
             Action::PlayCard { card } => {
                 let player = self.player(user_id)?;
                 let (war, events, seed) = self.war()?;
-                if war.trick.next_player() != player {
-                    return Err(GoatError::NotYourTurn { player });
-                }
-                let hand = &mut war.hands[player.idx()];
-                hand.check_has_card(card)?;
-                if let Some(rank) = war.trick.rank() {
-                    if card.rank() != rank && hand.cards().any(|c| c.rank() == rank) {
-                        return Err(GoatError::MustMatchRank { rank });
-                    }
-                }
-                *hand -= card;
-                war.play(WarPlayKind::PlayHand, card);
+                let hand = &war.hands[player.idx()];
+                war.trick.check_can_play(player, hand, card)?;
+                war.play_from_hand(player, card);
                 events.push(Event::PlayCard { card });
                 switch_if_finished!(self, war, events, seed);
             }
             Action::PlayTop => {
                 let player = self.player(user_id)?;
                 let (war, events, seed) = self.war()?;
-                if war.trick.next_player() != player {
-                    return Err(GoatError::NotYourTurn { player });
-                }
-                let hand = &war.hands[player.idx()];
-                if let Some(rank) = war.trick.rank() {
-                    if hand.cards().any(|c| c.rank() == rank) {
-                        return Err(GoatError::MustMatchRank { rank });
-                    }
-                }
                 if war.deck.len() <= 1 {
                     return Err(GoatError::CannotPlayFromEmptyDeck);
                 }
+                let hand = &war.hands[player.idx()];
+                war.trick.check_can_play_top(player, hand)?;
                 let card = war.deck.pop().unwrap();
-                war.play(WarPlayKind::PlayTop, card);
+                war.play_from_top(card);
                 events.push(Event::PlayTop { card });
                 switch_if_finished!(self, war, events, seed);
             }
             Action::Slough { card } => {
                 let player = self.player(user_id)?;
                 let (war, events, seed) = self.war()?;
-                war.slough(player, card)?;
+                let hand = &war.hands[player.idx()];
+                war.trick.check_can_slough(player, hand, card)?;
+                war.slough(player, card);
                 events.push(Event::Slough { player, card });
                 switch_if_finished!(self, war, events, seed);
             }
@@ -164,22 +143,39 @@ impl ServerGame {
                 events.push(Event::Draw { player, card });
                 switch_if_finished!(self, war, events, seed);
             }
+            Action::FinishSloughing => {
+                let player = self.player(user_id)?;
+                let (war, events, seed) = self.war()?;
+                war.end_trick(player)?;
+                events.push(Event::FinishSloughing { player });
+                switch_if_finished!(self, war, events, seed);
+            }
             Action::PlayRun { lo, hi } => {
                 let player = self.player(user_id)?;
                 let (rummy, events) = self.rummy()?;
                 rummy.play_run(player, lo, hi)?;
                 events.push(Event::PlayRun { lo, hi });
                 if rummy.is_finished() {
-                    self.phase = ServerPhase::Complete(rummy.next);
+                    self.phase = ServerPhase::Goat(GoatPhase::new(rummy.next));
                 }
             }
             Action::PickUp => {
                 let player = self.player(user_id)?;
                 let (rummy, events) = self.rummy()?;
-                if rummy.pick_up(player)? {
-                    self.phase = ServerPhase::Complete(player);
-                }
+                let complete = rummy.pick_up(player)?;
                 events.push(Event::PickUp);
+                if complete {
+                    self.phase = ServerPhase::Goat(GoatPhase::new(player));
+                }
+            }
+            Action::Goat { noise } => {
+                let player = self.player(user_id)?;
+                let (goat, events) = self.goat()?;
+                if player != goat.goat {
+                    return Err(GoatError::NoFreeShows);
+                }
+                goat.noise = Some(noise);
+                events.push(Event::Goat { noise });
             }
         };
         Ok(())
@@ -201,9 +197,16 @@ impl ServerGame {
         }
     }
 
-    fn rummy(&mut self) -> Result<(&mut RummyPhase<Cards>, &mut Vec<Event>), GoatError> {
+    fn rummy(&mut self) -> Result<(&mut RummyPhase<Cards, ()>, &mut Vec<Event>), GoatError> {
         match &mut self.phase {
             ServerPhase::Rummy(rummy) => Ok((rummy, &mut self.events)),
+            _ => Err(GoatError::InvalidAction),
+        }
+    }
+
+    fn goat(&mut self) -> Result<(&mut GoatPhase, &mut Vec<Event>), GoatError> {
+        match &mut self.phase {
+            ServerPhase::Goat(goat) => Ok((goat, &mut self.events)),
             _ => Err(GoatError::InvalidAction),
         }
     }

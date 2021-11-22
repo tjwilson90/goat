@@ -1,25 +1,25 @@
 use std::fmt::Debug;
 
 use crate::{
-    Cards, ClientDeck, ClientRummyHand, ClientWarHand, Event, GoatError, PlayerIdx, Rank,
-    RummyPhase, Slot, UserId, WarHand, WarPhase, WarPlayKind, WarTrick,
+    Cards, ClientDeck, ClientRummyHand, ClientWarHand, Event, GoatError, GoatPhase, PlayerIdx,
+    PreviousTrick, Rank, RummyHistory, RummyPhase, UserId, WarHand, WarPhase, WarTrick,
 };
 
 #[derive(Clone, Debug)]
-pub struct ClientGame<PrevTrick> {
-    pub phase: ClientPhase<PrevTrick>,
+pub struct ClientGame<PrevTrick, History> {
+    pub phase: ClientPhase<PrevTrick, History>,
     pub players: Vec<UserId>,
 }
 
 #[derive(Clone, Debug)]
-pub enum ClientPhase<PrevTrick> {
+pub enum ClientPhase<PrevTrick, History> {
     Unstarted,
     War(WarPhase<ClientDeck, ClientWarHand, PrevTrick>),
-    Rummy(RummyPhase<ClientRummyHand>),
-    Complete(PlayerIdx),
+    Rummy(RummyPhase<ClientRummyHand, History>),
+    Goat(GoatPhase),
 }
 
-impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
+impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, History> {
     pub fn new() -> Self {
         Self {
             phase: ClientPhase::Unstarted,
@@ -42,29 +42,31 @@ impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
                     hands: vec![ClientWarHand::new(); num_players].into_boxed_slice(),
                     won: vec![Cards::NONE; num_players].into_boxed_slice(),
                     trick: WarTrick::new(PlayerIdx(0), num_players),
-                    prev_trick: Default::default(),
+                    prev_trick: PreviousTrick::empty(),
                 })
             }
             Event::PlayCard { card } => {
                 let war = self.war()?;
-                let player = war.trick.next_player();
-                let hand = &mut war.hands[player.idx()];
-                *hand -= card;
-                war.play(WarPlayKind::PlayHand, card);
+                let player = war.trick.next_player().unwrap();
+                war.play_from_hand(player, card);
             }
             Event::PlayTop { card } => {
                 let war = self.war()?;
                 war.deck.draw();
-                war.play(WarPlayKind::PlayTop, card);
+                war.play_from_top(card);
             }
             Event::Slough { player, card } => {
                 let war = self.war()?;
-                war.slough(player, card)?;
+                war.slough(player, card);
             }
             Event::Draw { player, card } => {
                 let war = self.war()?;
                 war.deck.draw();
                 war.hands[player.idx()] += card;
+            }
+            Event::FinishSloughing { player } => {
+                let war = self.war()?;
+                war.end_trick(player)?;
             }
             Event::RevealTrump { trump } => {
                 let war = self.war()?;
@@ -80,6 +82,7 @@ impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
                 let hand = &mut rummy.hands[player.idx()];
                 *hand += dreck;
                 if rummy.finished_receiving_dreck() {
+                    rummy.reset_trick();
                     rummy.advance_leader();
                 }
             }
@@ -87,15 +90,19 @@ impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
                 let rummy = self.rummy()?;
                 rummy.play_run(rummy.next, lo, hi)?;
                 if rummy.is_finished() {
-                    self.phase = ClientPhase::Complete(rummy.next);
+                    self.phase = ClientPhase::Goat(GoatPhase::new(rummy.next));
                 }
             }
             Event::PickUp => {
                 let rummy = self.rummy()?;
                 let player = rummy.next;
                 if rummy.pick_up(player)? {
-                    self.phase = ClientPhase::Complete(player);
+                    self.phase = ClientPhase::Goat(GoatPhase::new(player));
                 }
+            }
+            Event::Goat { noise } => {
+                let goat = self.goat()?;
+                goat.noise = Some(noise);
             }
             Event::RedactedDraw { player } => {
                 let war = self.war()?;
@@ -117,6 +124,7 @@ impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
                 let hand = &mut rummy.hands[player.idx()];
                 hand.unknown += dreck;
                 if rummy.finished_receiving_dreck() {
+                    rummy.reset_trick();
                     rummy.advance_leader();
                 }
             }
@@ -131,9 +139,16 @@ impl<PrevTrick: Slot<WarTrick>> ClientGame<PrevTrick> {
         }
     }
 
-    fn rummy(&mut self) -> Result<&mut RummyPhase<ClientRummyHand>, GoatError> {
+    fn rummy(&mut self) -> Result<&mut RummyPhase<ClientRummyHand, History>, GoatError> {
         match &mut self.phase {
             ClientPhase::Rummy(rummy) => Ok(rummy),
+            _ => Err(GoatError::InvalidAction),
+        }
+    }
+
+    fn goat(&mut self) -> Result<&mut GoatPhase, GoatError> {
+        match &mut self.phase {
+            ClientPhase::Goat(goat) => Ok(goat),
             _ => Err(GoatError::InvalidAction),
         }
     }

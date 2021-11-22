@@ -9,6 +9,7 @@ pub struct WarPlay {
 }
 
 #[repr(u8)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub enum WarPlayKind {
     PlayHand = 0,
     PlayTop,

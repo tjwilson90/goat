@@ -15,7 +15,7 @@ impl Strategy for AdaptSimple {
         }
     }
 
-    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Action {
+    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand, ()>) -> Action {
         strategy::rummy_simple(idx, rummy)
     }
 }

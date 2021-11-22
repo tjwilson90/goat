@@ -21,7 +21,11 @@ pub enum Action {
     #[serde(rename_all = "camelCase")]
     Draw,
     #[serde(rename_all = "camelCase")]
+    FinishSloughing,
+    #[serde(rename_all = "camelCase")]
     PlayRun { lo: Card, hi: Card },
     #[serde(rename_all = "camelCase")]
     PickUp,
+    #[serde(rename_all = "camelCase")]
+    Goat { noise: usize },
 }

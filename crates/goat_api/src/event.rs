@@ -21,6 +21,8 @@ pub enum Event {
     #[serde(rename_all = "camelCase")]
     Draw { player: PlayerIdx, card: Card },
     #[serde(rename_all = "camelCase")]
+    FinishSloughing { player: PlayerIdx },
+    #[serde(rename_all = "camelCase")]
     RevealTrump { trump: Card },
     #[serde(rename_all = "camelCase")]
     OfferDreck { player: PlayerIdx, dreck: Cards },
@@ -30,6 +32,8 @@ pub enum Event {
     PlayRun { lo: Card, hi: Card },
     #[serde(rename_all = "camelCase")]
     PickUp,
+    #[serde(rename_all = "camelCase")]
+    Goat { noise: usize },
     #[serde(rename_all = "camelCase")]
     RedactedDraw { player: PlayerIdx },
     #[serde(rename_all = "camelCase")]

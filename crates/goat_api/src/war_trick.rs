@@ -4,7 +4,9 @@ use std::{fmt, mem};
 
 use smallvec::SmallVec;
 
-use crate::{Card, Cards, PlayerIdx, Rank, WarPlay, WarPlayKind};
+use crate::{
+    Card, Cards, GoatError, PlayerIdx, Rank, ServerWarHand, WarHand, WarPlay, WarPlayKind,
+};
 
 static PLAYERS: &[PlayerIdx] = &[
     PlayerIdx(0),
@@ -32,6 +34,7 @@ pub struct WarTrick {
     players: SmallVec<[PlayerIdx; 16]>,
     winners: SmallVec<[PlayerIdx; 16]>,
     plays: SmallVec<[WarPlay; 12]>,
+    end_mask: u16,
 }
 
 impl WarTrick {
@@ -45,21 +48,84 @@ impl WarTrick {
             players,
             winners: SmallVec::new(),
             plays: SmallVec::new(),
+            end_mask: if num_players == 16 {
+                0xffff
+            } else {
+                (1 << num_players) - 1
+            },
         }
     }
 
-    pub fn can_slough(&self, player: PlayerIdx, card: Card) -> bool {
+    pub fn is_empty(&self) -> bool {
+        self.plays.is_empty()
+    }
+
+    pub fn check_can_play(
+        &self,
+        player: PlayerIdx,
+        hand: &ServerWarHand,
+        card: Card,
+    ) -> Result<(), GoatError> {
+        if self.next_player() != Some(player) {
+            return Err(GoatError::NotYourTurn { player });
+        }
+        hand.check_has_card(card)?;
+        if let Some(rank) = self.rank() {
+            if card.rank() != rank && hand.cards().any(|c| c.rank() == rank) {
+                return Err(GoatError::MustMatchRank { rank });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn check_can_play_top(
+        &self,
+        player: PlayerIdx,
+        hand: &ServerWarHand,
+    ) -> Result<(), GoatError> {
+        if self.next_player() != Some(player) {
+            return Err(GoatError::NotYourTurn { player });
+        }
+        if let Some(rank) = self.rank() {
+            if hand.cards().any(|c| c.rank() == rank) {
+                return Err(GoatError::MustMatchRank { rank });
+            }
+        }
+        Ok(())
+    }
+
+    pub fn check_can_slough(
+        &self,
+        player: PlayerIdx,
+        hand: &ServerWarHand,
+        card: Card,
+    ) -> Result<(), GoatError> {
+        hand.check_has_card(card)?;
+        if self.ended(player) {
+            return Err(GoatError::CannotSloughOnEndedTrick);
+        }
         if self.rank() == Some(card.rank()) {
-            !self.players[self.next as usize..].contains(&player)
+            if self.players[self.next as usize..].contains(&player) {
+                return Err(GoatError::IllegalSlough { card });
+            }
         } else {
-            self.plays
+            if !self
+                .plays
                 .iter()
                 .any(|play| play.card.rank() == card.rank())
+            {
+                return Err(GoatError::IllegalSlough { card });
+            }
         }
+        Ok(())
     }
 
-    pub fn next_player(&self) -> PlayerIdx {
-        self.players[self.next as usize]
+    pub fn next_player(&self) -> Option<PlayerIdx> {
+        if self.players.len() == 1 {
+            None
+        } else {
+            Some(self.players[self.next as usize])
+        }
     }
 
     pub fn rank(&self) -> Option<Rank> {
@@ -107,6 +173,19 @@ impl WarTrick {
             .push(WarPlay::new(player, WarPlayKind::Slough, card));
     }
 
+    pub fn end_mask(&self) -> u16 {
+        self.end_mask
+    }
+
+    pub fn ended(&self, player: PlayerIdx) -> bool {
+        self.end_mask & (1 << player.0) == 0
+    }
+
+    pub fn end(&mut self, player: PlayerIdx) -> bool {
+        self.end_mask &= !(1 << player.0);
+        self.end_mask == 0
+    }
+
     pub fn cards(&self) -> impl Iterator<Item = Card> + '_ {
         self.plays.iter().map(|p| p.card)
     }
@@ -128,6 +207,7 @@ impl Debug for WarTrick {
         if !self.plays.is_empty() {
             f.field("cards", &self.cards().collect::<Cards>());
         }
+        f.field("end_mask", &format!("{:b}", self.end_mask));
         f.finish()
     }
 }

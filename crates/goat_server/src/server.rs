@@ -164,8 +164,7 @@ impl Server {
         games.retain(|game_id, game| {
             let (game, last_updated) = &*game.lock();
             let elapsed = last_updated.elapsed();
-            let drop = elapsed > max_age
-                || (elapsed > complete_age && (!game.started() || game.complete().is_some()));
+            let drop = elapsed > max_age || (elapsed > complete_age && !game.active());
             if drop {
                 drops.push(*game_id);
             } else {

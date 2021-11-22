@@ -2,27 +2,31 @@ use rand::prelude::{SliceRandom, StdRng};
 use rand::SeedableRng;
 use smallvec::SmallVec;
 
-use crate::{Card, Cards, Event, GoatError, PlayerIdx, Rank, RummyHand, RummyTrick};
+use crate::{Card, Cards, Event, GoatError, PlayerIdx, Rank, RummyHand, RummyHistory, RummyTrick};
 
 #[derive(Clone, Debug)]
-pub struct RummyPhase<Hand> {
+pub struct RummyPhase<Hand, History> {
     pub hands: Box<[Hand]>,
     pub trick: RummyTrick,
     pub next: PlayerIdx,
     pub trump: Card,
     pub pick_ups: u64,
+    pub history: History,
 }
 
-impl<Hand: RummyHand> RummyPhase<Hand> {
+impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
     pub fn new(hands: Box<[Hand]>, next: PlayerIdx, trump: Card) -> Self {
-        let trick = Self::new_trick(&*hands);
-        Self {
+        let num_players = hands.len();
+        let mut phase = Self {
             hands,
-            trick,
+            trick: RummyTrick::new(0),
             next,
             trump,
             pick_ups: 0,
-        }
+            history: History::new(num_players),
+        };
+        phase.reset_trick();
+        phase
     }
 
     pub fn play_run(&mut self, player: PlayerIdx, lo: Card, hi: Card) -> Result<(), GoatError> {
@@ -38,9 +42,10 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
             return Err(GoatError::CannotPlayRange { lo });
         }
         *hand -= Cards::range(lo, hi);
+        self.history.play(player, lo, hi);
         let killed = self.trick.play(lo, hi);
         if killed {
-            self.trick = Self::new_trick(&*self.hands);
+            self.reset_trick();
             self.pick_ups = 0;
         } else {
             self.next = PlayerIdx(self.next.0 + 1);
@@ -53,11 +58,15 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
         if self.next != player {
             return Err(GoatError::NotYourTurn { player });
         }
+        if self.trick.is_empty() {
+            return Err(GoatError::CannotPickUpFromEmptyTrick);
+        }
         let hand = &mut self.hands[player.idx()];
         let (lo, hi) = self.trick.pick_up();
         *hand += Cards::range(lo, hi);
+        self.history.pick_up(player);
         if self.trick.is_empty() {
-            self.trick = Self::new_trick(&*self.hands);
+            self.reset_trick();
         }
         let complete = self.increment_pick_ups(player);
         self.next = PlayerIdx(self.next.0 + 1);
@@ -103,12 +112,12 @@ impl<Hand: RummyHand> RummyPhase<Hand> {
         false
     }
 
-    fn new_trick(hands: &[Hand]) -> RummyTrick {
-        RummyTrick::new(hands.iter().filter(|h| !h.is_empty()).count())
+    pub fn reset_trick(&mut self) {
+        self.trick = RummyTrick::new(self.hands.iter().filter(|h| !h.is_empty()).count());
     }
 }
 
-impl RummyPhase<Cards> {
+impl RummyPhase<Cards, ()> {
     pub fn distribute_dreck(&mut self, events: &mut Vec<Event>, seed: u64) {
         let mut dreck_players: SmallVec<[PlayerIdx; 16]> = self
             .hands
@@ -161,6 +170,7 @@ impl RummyPhase<Cards> {
                 events.push(Event::ReceiveDreck { player, dreck });
             }
         }
+        self.reset_trick();
         self.advance_leader();
     }
 }

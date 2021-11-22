@@ -32,6 +32,12 @@ fn user_name() -> impl Filter<Extract = (String,), Error = Rejection> + Clone {
     warp::cookie("USER_NAME")
 }
 
+fn root() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    warp::path::end()
+        .and(warp::get())
+        .and(warp::fs::file("./assets/index.html"))
+}
+
 fn assets() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     warp::path("assets")
         .and(warp::get())
@@ -127,8 +133,9 @@ fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, s
             | Action::PlayTop
             | Action::Slough { .. }
             | Action::PlayRun { .. }
-            | Action::PickUp => Duration::from_secs(2),
-            Action::Draw => Duration::from_millis(200),
+            | Action::PickUp
+            | Action::Goat { .. } => Duration::from_secs(3),
+            Action::Draw | Action::FinishSloughing => Duration::from_millis(200),
             _ => Duration::ZERO,
         });
         if let Err(e) = bot.run().await {
@@ -170,7 +177,8 @@ async fn main() {
     run_bot(state, "George (bot)".to_string(), CoverSimple);
     run_bot(state, "Hannah (bot)".to_string(), DuckSimple);
 
-    let app = assets()
+    let app = root()
+        .or(assets())
         .or(new_game(state))
         .or(change_name(state))
         .or(apply_action(state))

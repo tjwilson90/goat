@@ -2,9 +2,11 @@ use wasm_bindgen::prelude::*;
 
 pub use client::*;
 pub use game::*;
+pub use one_action::*;
 
 mod client;
 mod game;
+mod one_action;
 
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]

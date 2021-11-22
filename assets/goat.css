@@ -2,13 +2,18 @@ body {
     background-color: lightblue;
 }
 
-.game,#subscribers {
+#subscribers,.game,.info,.trick {
     border-style: solid;
 }
 
-#subscribers {
+.vertical {
     display: flex;
     flex-flow: column;
+}
+
+.horizontal {
+    display: flex;
+    flex-flow: row;
 }
 
 .name:not(.online) {
@@ -17,4 +22,46 @@ body {
 
 .name.self {
     font-weight: bold;
+}
+
+.next {
+    background-color: lightgreen;
+}
+
+.finished {
+    background-color: lightpink;
+}
+
+[data-suit="C"] {
+    color: #008000;
+}
+[data-suit="D"] {
+    color: #0d00ff;
+}
+[data-suit="H"] {
+    color: #ff0000;
+}
+[data-suit="S"] {
+    color: #000000;
+}
+span[data-suit] {
+    margin: 2px;
+}
+
+.plays-label {
+    min-width: 60px;
+}
+
+.lead.playTop {
+    text-decoration: underline overline;
+}
+.lead {
+    text-decoration: underline;
+}
+.playTop {
+    text-decoration: overline;
+}
+
+.info,.trick {
+    height: 126px;
 }

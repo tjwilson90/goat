@@ -69,7 +69,7 @@ impl Cards {
         bits: 0x0155_5555_0155_5555_0155_5555_0155_5555,
     };
     pub const COMMON_DRECK: Cards = Cards {
-        bits: 0x0000_0155_0000_0155_0000_0155_0000_0155,
+        bits: 0x0000_0055_0000_0055_0000_0055_0000_0055,
     };
 
     pub fn range(lo: Card, hi: Card) -> Cards {
@@ -307,6 +307,18 @@ impl Iterator for CardsIter {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = self.0.len() as usize;
         (size, Some(size))
+    }
+}
+
+impl DoubleEndedIterator for CardsIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.0 == Cards::NONE {
+            None
+        } else {
+            let card = self.0.min();
+            self.0 -= card;
+            Some(card)
+        }
     }
 }
 

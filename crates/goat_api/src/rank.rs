@@ -44,6 +44,10 @@ impl Rank {
     pub fn next_up(self) -> Rank {
         Rank::from(self as u8 + 1)
     }
+
+    pub fn next_down(self) -> Rank {
+        Rank::from(self as u8 - 1)
+    }
 }
 
 impl From<u8> for Rank {

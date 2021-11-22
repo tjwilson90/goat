@@ -11,7 +11,7 @@ impl Strategy for PlayTopSimple {
         strategy::war_play_top(idx, war)
     }
 
-    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Action {
+    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand, ()>) -> Action {
         strategy::rummy_simple(idx, rummy)
     }
 }

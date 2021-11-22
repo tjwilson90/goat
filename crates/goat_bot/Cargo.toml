@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 goat_api = { path = "../goat_api" }
 log = "*"
+rand = "*"
 tokio = { version = "*", features = ["sync"] }

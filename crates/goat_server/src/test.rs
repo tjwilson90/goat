@@ -45,6 +45,9 @@ macro_rules! top {
                 }
             })*
         );
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
     };
 }
 
@@ -259,7 +262,7 @@ async fn test_bots() -> Result<(), GoatError> {
     let server = Arc::new(Server::new());
     let watcher = UserId(Uuid::new_v4());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
-    let mut client: Client<(), ()> = Client::new(());
+    let mut client: Client<(), (), ()> = Client::new(());
     let cover = run_bot(server.clone(), "cover".to_string(), CoverSimple);
     let duck = run_bot(server.clone(), "duck".to_string(), DuckSimple);
     let top = run_bot(server.clone(), "top".to_string(), PlayTopSimple);
@@ -272,7 +275,7 @@ async fn test_bots() -> Result<(), GoatError> {
         server.apply_action(watcher, game_id, Action::Start { num_decks: 1 })?;
         loop {
             if let Some(ClientGame {
-                phase: ClientPhase::Complete(goat),
+                phase: ClientPhase::Goat(goat),
                 ..
             }) = client.games.get(&game_id)
             {

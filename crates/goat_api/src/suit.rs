@@ -7,7 +7,7 @@ use crate::{Card, Rank};
 const SUITS: [char; 4] = ['C', 'D', 'H', 'S'];
 
 #[repr(u8)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Suit {
     Clubs,
     Diamonds,

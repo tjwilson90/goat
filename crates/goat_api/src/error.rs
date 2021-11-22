@@ -8,10 +8,16 @@ pub enum GoatError {
     CannotDrawFromEmptyDeck,
     #[error("Players cannot hold more than three cards at once")]
     CannotDrawMoreThanThreeCards,
+    #[error("Players cannot finish sloughing on a trick until is is complete")]
+    CannotFinishSloughingIncompleteTrick,
+    #[error("Picking up cards from an emoty trick is not possible")]
+    CannotPickUpFromEmptyTrick,
     #[error("Playing from the top of the deck is not possible when the deck is empty")]
     CannotPlayFromEmptyDeck,
     #[error("A range starting with {lo} cannot be played on the current trick")]
     CannotPlayRange { lo: Card },
+    #[error("Players cannot slough on a trick after they have finished sloughing")]
+    CannotSloughOnEndedTrick,
     #[error("Card {card} cannot be sloughed")]
     IllegalSlough { card: Card },
     #[error("This action cannot be taken at this point in the game")]
@@ -31,6 +37,8 @@ pub enum GoatError {
         highest card played so far in this round of the current trick"
     )]
     MustMatchRank { rank: Rank },
+    #[error("Only the goat may make a goat noise")]
+    NoFreeShows,
     #[error("Card {card} is not in the hand")]
     NotYourCard { card: Card },
     #[error("It is not player {player}'s turn")]

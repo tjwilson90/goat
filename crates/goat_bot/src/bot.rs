@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use rand::Rng;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::time::Duration;
 
@@ -8,7 +9,7 @@ use goat_api::{Action, Client, ClientPhase, GameId, GoatError, PlayerIdx, Respon
 use crate::Strategy;
 
 pub struct Bot<Tx, S> {
-    client: Client<(), ()>,
+    client: Client<(), (), ()>,
     user_id: UserId,
     rx: UnboundedReceiver<Response>,
     tx: Tx,
@@ -79,11 +80,20 @@ impl<
         let idx = game.players.iter().position(|id| *id == self.user_id)?;
         let idx = PlayerIdx(idx as u8);
         match &game.phase {
-            ClientPhase::Unstarted | ClientPhase::Complete(_) => None,
+            ClientPhase::Unstarted => None,
             ClientPhase::War(war) => self.strategy.war(idx, war),
             ClientPhase::Rummy(rummy) => {
                 if rummy.next == idx {
                     Some(self.strategy.rummy(idx, rummy))
+                } else {
+                    None
+                }
+            }
+            ClientPhase::Goat(goat) => {
+                if goat.goat == idx && goat.noise.is_none() {
+                    let total_noises = std::fs::read_dir("./assets/noises/").ok()?.count();
+                    let noise = rand::thread_rng().gen_range(0..total_noises);
+                    Some(Action::Goat { noise })
                 } else {
                     None
                 }

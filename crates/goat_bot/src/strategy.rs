@@ -5,7 +5,7 @@ use goat_api::{
 
 pub trait Strategy {
     fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action>;
-    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Action;
+    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand, ()>) -> Action;
 }
 
 /// The simplest possible war strategy, never hold any cards in hand and always play from the top
@@ -14,7 +14,14 @@ pub fn war_play_top(
     idx: PlayerIdx,
     war: &WarPhase<ClientDeck, ClientWarHand, ()>,
 ) -> Option<Action> {
-    if war.trick.next_player() == idx {
+    if war.trick.winner().is_some() {
+        return if war.trick.ended(idx) {
+            None
+        } else {
+            Some(Action::FinishSloughing)
+        };
+    }
+    if war.trick.next_player() == Some(idx) {
         Some(Action::PlayTop)
     } else {
         None
@@ -31,11 +38,18 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -
         return Some(Action::Draw);
     }
     for card in hand.cards() {
-        if card.rank() > Rank::Eight && war.trick.can_slough(idx, card) {
+        if card.rank() > Rank::Eight && war.trick.check_can_slough(idx, hand, card).is_ok() {
             return Some(Action::Slough { card });
         }
     }
-    if war.trick.next_player() != idx {
+    if war.trick.winner().is_some() {
+        return if war.trick.ended(idx) {
+            None
+        } else {
+            Some(Action::FinishSloughing)
+        };
+    }
+    if war.trick.next_player() != Some(idx) {
         None
     } else if let Some(rank) = war.trick.rank() {
         if let Some(card) = hand.cards().find(|c| c.rank() == rank) {
@@ -72,11 +86,18 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
         return Some(Action::Draw);
     }
     for card in hand.cards() {
-        if card.rank() < Rank::Eight && war.trick.can_slough(idx, card) {
+        if card.rank() < Rank::Eight && war.trick.check_can_slough(idx, hand, card).is_ok() {
             return Some(Action::Slough { card });
         }
     }
-    if war.trick.next_player() != idx {
+    if war.trick.winner().is_some() {
+        return if war.trick.ended(idx) {
+            None
+        } else {
+            Some(Action::FinishSloughing)
+        };
+    }
+    if war.trick.next_player() != Some(idx) {
         None
     } else if let Some(rank) = war.trick.rank() {
         if let Some(card) = hand.cards().find(|c| c.rank() == rank) {
@@ -104,7 +125,7 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
 }
 
 /// A rummy strategy that preferentially plays long, low runs from suits with many runs.
-pub fn rummy_simple(idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand>) -> Action {
+pub fn rummy_simple(idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand, ()>) -> Action {
     let hand = rummy.hands[idx.idx()].known;
     match rummy.trick.top_card() {
         Some(card) => {

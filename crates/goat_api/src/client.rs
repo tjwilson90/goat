@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
-use crate::{ClientGame, GameId, GoatError, Response, Slot, UserDb, WarTrick};
+use crate::{ClientGame, GameId, GoatError, PreviousTrick, Response, RummyHistory, UserDb};
 
-pub struct Client<Users, PrevTrick> {
-    pub games: HashMap<GameId, ClientGame<PrevTrick>>,
+pub struct Client<Users, PrevTrick, History> {
+    pub games: HashMap<GameId, ClientGame<PrevTrick, History>>,
     pub users: Users,
 }
 
-impl<Users: UserDb, PrevTrick: Slot<WarTrick>> Client<Users, PrevTrick> {
+impl<Users: UserDb, PrevTrick: PreviousTrick, History: RummyHistory>
+    Client<Users, PrevTrick, History>
+{
     pub fn new(users: Users) -> Self {
         Self {
             games: HashMap::new(),
