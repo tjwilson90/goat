@@ -608,7 +608,8 @@ function updateTrickElements(playElements, sloughElements, trick) {
         return;
     }
     for (let i = 0; i < playElements.length; i++) {
-        playElements[i].parentElement.classList.toggle("next", i === trick.next);
+        const next = trick.winner === undefined ? i === trick.next : (trick.endMask & (1 << i)) !== 0;
+        playElements[i].parentElement.classList.toggle("next", next);
     }
     for (const play of trick.plays) {
         const parent = play.kind == "slough" ? sloughElements[play.player] : playElements[play.player];
@@ -763,6 +764,10 @@ document.getElementById("name").addEventListener("change", (event) => {
 
 document.getElementById("new-game").addEventListener("click", (event) => {
     fetch("./new_game", { method: "POST" });
+});
+
+document.getElementById("rules").addEventListener("click", (event) => {
+    alert("1. Loser must make a goat noise.\n2. No free shows.\n3. Other rules must be figured out as you play.");
 });
 
 document.addEventListener("visibilitychange", (event) => {

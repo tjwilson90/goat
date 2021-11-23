@@ -102,7 +102,7 @@ impl Cards {
     }
 
     pub fn in_suit(self, suit: Suit) -> Cards {
-        let mask = 0x0155_5555 << (32 * suit.idx());
+        let mask = 0x03ff_ffff << (32 * suit.idx());
         Cards {
             bits: self.bits & mask,
         }

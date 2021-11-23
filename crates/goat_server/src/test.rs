@@ -272,7 +272,7 @@ async fn test_bots() -> Result<(), GoatError> {
         server.apply_action(watcher, game_id, Action::Join { user_id: cover })?;
         server.apply_action(watcher, game_id, Action::Join { user_id: duck })?;
         server.apply_action(watcher, game_id, Action::Join { user_id: top })?;
-        server.apply_action(watcher, game_id, Action::Start { num_decks: 1 })?;
+        server.apply_action(watcher, game_id, Action::Start { num_decks: 2 })?;
         loop {
             if let Some(ClientGame {
                 phase: ClientPhase::Goat(goat),
