@@ -165,11 +165,7 @@ function updateRummyGame(gameId, game, gameElem) {
             newTrickElem.appendChild(document.createTextNode(", "));
         }
         let play = game.phase.trick.plays[i];
-        newTrickElem.appendChild(pretty(play[0]));
-        if (play[0] !== play[1]) {
-            newTrickElem.appendChild(document.createTextNode(" - "));
-            newTrickElem.appendChild(pretty(play[1]));
-        }
+        appendCardRange(newTrickElem, play[0], play[1]);
     }
     const trickElem = gameElem.querySelector(".rummy-trick");
     trickElem.innerHTML = null;
@@ -196,19 +192,7 @@ function updateRummyGame(gameId, game, gameElem) {
         handElem.parentElement.classList.toggle("next", i === game.phase.next);
         handElem.parentElement.classList.toggle("finished", hand.length === 0);
 
-        const action = game.phase.history[i];
-        const lastPlayElem = lastPlayElems[i];
-        if (action.type == "pickUp") {
-            lastPlayElem.textContent = "Last Play: Pick Up";
-        } else if (action.type == "play") {
-            lastPlayElem.innerHTML = null;
-            lastPlayElem.appendChild(createElement("span", {textContent: "Last Play: "}));
-            lastPlayElem.appendChild(pretty(action.lo));
-            if (action.lo != action.hi) {
-                lastPlayElem.appendChild(createElement("span", {textContent: " - "}));
-                lastPlayElem.appendChild(pretty(action.hi));
-            }
-        }
+        updateLastPlay(lastPlayElems[i], game.phase.history[i]);
     }
     if (index >= 0) {
         const cardsElem = gameElem.querySelector(".rummy-cards");
@@ -219,6 +203,46 @@ function updateRummyGame(gameId, game, gameElem) {
         cardsElem.innerHTML = null;
         cardsElem.appendChild(newCardsElem);
         updateRummyCards(gameId, game, index);
+    }
+}
+
+function updateLastPlay(elem, action) {
+    if (action.type === "none") {
+        return;
+    }
+    elem.innerHTML = null;
+    elem.appendChild(createElement("span", {textContent: "Last Play: "}));
+    switch (action.type) {
+        case "lead":
+            elem.appendChild(createElement("span", {textContent: "Lead "}));
+            appendCardRange(elem, action.lo, action.hi);
+            break;
+        case "play":
+            elem.appendChild(createElement("span", {textContent: "Play "}));
+            appendCardRange(elem, action.lo, action.hi);
+            break;
+        case "kill":
+            elem.appendChild(createElement("span", {textContent: "Kill "}));
+            appendCardRange(elem, action.lo, action.hi);
+            break;
+        case "killAndLead":
+            elem.appendChild(createElement("span", {textContent: "Kill "}));
+            appendCardRange(elem, action.killLo, action.killHi);
+            elem.appendChild(createElement("span", {textContent: ", Lead "}));
+            appendCardRange(elem, action.leadLo, action.leadHi);
+            break;
+        case "pickUp":
+            elem.appendChild(createElement("span", {textContent: "Pick Up "}));
+            appendCardRange(elem, action.lo, action.hi);
+            break;
+    }
+}
+
+function appendCardRange(elem, lo, hi) {
+    elem.appendChild(pretty(lo));
+    if (lo !== hi) {
+        elem.appendChild(createElement("span", {textContent: " - "}));
+        elem.appendChild(pretty(hi));
     }
 }
 

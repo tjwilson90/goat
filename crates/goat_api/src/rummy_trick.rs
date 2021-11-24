@@ -19,6 +19,10 @@ impl RummyTrick {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.plays.len()
+    }
+
     pub fn plays(&self) -> &[(Card, Card)] {
         &*self.plays
     }

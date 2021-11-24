@@ -42,13 +42,18 @@ impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
             return Err(GoatError::CannotPlayRange { lo });
         }
         *hand -= Cards::range(lo, hi);
-        self.history.play(player, lo, hi);
         let killed = self.trick.play(lo, hi);
         if killed {
+            self.history.kill(player, lo, hi);
             self.reset_trick();
             self.pick_ups = 0;
         } else {
             self.next = PlayerIdx(self.next.0 + 1);
+            if self.trick.len() == 1 {
+                self.history.lead(player, lo, hi);
+            } else {
+                self.history.play(player, lo, hi);
+            }
         }
         self.advance_leader();
         Ok(())
@@ -64,7 +69,7 @@ impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
         let hand = &mut self.hands[player.idx()];
         let (lo, hi) = self.trick.pick_up();
         *hand += Cards::range(lo, hi);
-        self.history.pick_up(player);
+        self.history.pick_up(player, lo, hi);
         if self.trick.is_empty() {
             self.reset_trick();
         }

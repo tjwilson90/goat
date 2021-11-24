@@ -1,53 +1,82 @@
-use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
 
 use goat_api::{Card, PlayerIdx, RummyHistory};
 
 pub struct OneAction {
-    history: Box<[(Card, Card)]>,
+    history: Box<[LastAction]>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Copy, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 pub enum LastAction {
-    Play { lo: Card, hi: Card },
-    PickUp,
+    Lead {
+        lo: Card,
+        hi: Card,
+    },
+    Play {
+        lo: Card,
+        hi: Card,
+    },
+    Kill {
+        lo: Card,
+        hi: Card,
+    },
+    #[serde(rename_all = "camelCase")]
+    KillAndLead {
+        kill_lo: Card,
+        kill_hi: Card,
+        lead_lo: Card,
+        lead_hi: Card,
+    },
+    PickUp {
+        lo: Card,
+        hi: Card,
+    },
     None,
 }
 
-const NONE_SENTINEL: (Card, Card) = (Card::TwoDiamonds, Card::TwoSpades);
-const PICK_UP_SENTINEL: (Card, Card) = (Card::TwoClubs, Card::TwoDiamonds);
-
 impl OneAction {
     pub fn last_action(&self, player: PlayerIdx) -> LastAction {
-        let action = self.history[player.idx()];
-        if action == NONE_SENTINEL {
-            LastAction::None
-        } else if action == PICK_UP_SENTINEL {
-            LastAction::PickUp
-        } else {
-            LastAction::Play {
-                lo: action.0,
-                hi: action.1,
-            }
-        }
+        self.history[player.idx()]
     }
 }
 
 impl RummyHistory for OneAction {
     fn new(num_players: usize) -> Self {
         Self {
-            history: vec![NONE_SENTINEL; num_players].into_boxed_slice(),
+            history: vec![LastAction::None; num_players].into_boxed_slice(),
+        }
+    }
+
+    fn lead(&mut self, player: PlayerIdx, lo: Card, hi: Card) {
+        let action = &mut self.history[player.idx()];
+        match *action {
+            LastAction::Kill {
+                lo: kill_lo,
+                hi: kill_hi,
+            } => {
+                *action = LastAction::KillAndLead {
+                    kill_lo,
+                    kill_hi,
+                    lead_lo: lo,
+                    lead_hi: hi,
+                }
+            }
+            _ => *action = LastAction::Lead { lo, hi },
         }
     }
 
     fn play(&mut self, player: PlayerIdx, lo: Card, hi: Card) {
-        self.history[player.idx()] = (lo, hi);
+        self.history[player.idx()] = LastAction::Play { lo, hi };
     }
 
-    fn pick_up(&mut self, player: PlayerIdx) {
-        self.history[player.idx()] = PICK_UP_SENTINEL;
+    fn kill(&mut self, player: PlayerIdx, lo: Card, hi: Card) {
+        self.history[player.idx()] = LastAction::Kill { lo, hi };
+    }
+
+    fn pick_up(&mut self, player: PlayerIdx, lo: Card, hi: Card) {
+        self.history[player.idx()] = LastAction::PickUp { lo, hi };
     }
 }
 
@@ -56,10 +85,6 @@ impl Serialize for OneAction {
     where
         S: Serializer,
     {
-        let mut ser = ser.serialize_seq(Some(self.history.len()))?;
-        for i in 0..self.history.len() {
-            ser.serialize_element(&self.last_action(PlayerIdx(i as u8)))?;
-        }
-        ser.end()
+        self.history.serialize(ser)
     }
 }
