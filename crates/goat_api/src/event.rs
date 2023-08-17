@@ -21,7 +21,7 @@ pub enum Event {
     #[serde(rename_all = "camelCase")]
     Draw { player: PlayerIdx, card: Card },
     #[serde(rename_all = "camelCase")]
-    FinishSloughing { player: PlayerIdx },
+    FinishTrick { player: PlayerIdx },
     #[serde(rename_all = "camelCase")]
     RevealTrump { trump: Card },
     #[serde(rename_all = "camelCase")]

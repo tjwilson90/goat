@@ -14,11 +14,11 @@ pub fn war_play_top(
     idx: PlayerIdx,
     war: &WarPhase<ClientDeck, ClientWarHand, ()>,
 ) -> Option<Action> {
-    if war.trick.winner().is_some() {
+    if war.is_finished() || war.trick.winner().is_some() {
         return if war.trick.ended(idx) {
             None
         } else {
-            Some(Action::FinishSloughing)
+            Some(Action::FinishTrick)
         };
     }
     if war.trick.next_player() == Some(idx) {
@@ -42,11 +42,11 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -
             return Some(Action::Slough { card });
         }
     }
-    if war.trick.winner().is_some() {
+    if war.is_finished() || war.trick.winner().is_some() {
         return if war.trick.ended(idx) {
             None
         } else {
-            Some(Action::FinishSloughing)
+            Some(Action::FinishTrick)
         };
     }
     if war.trick.next_player() != Some(idx) {
@@ -90,11 +90,11 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
             return Some(Action::Slough { card });
         }
     }
-    if war.trick.winner().is_some() {
+    if war.is_finished() || war.trick.winner().is_some() {
         return if war.trick.ended(idx) {
             None
         } else {
-            Some(Action::FinishSloughing)
+            Some(Action::FinishTrick)
         };
     }
     if war.trick.next_player() != Some(idx) {

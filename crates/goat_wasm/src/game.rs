@@ -2,16 +2,20 @@ use serde::ser::{SerializeSeq, SerializeStruct};
 use serde::{Serialize, Serializer};
 
 use goat_api::{
-    Card, Cards, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, PlayerIdx, Rank,
-    RummyTrick, ServerWarHand, WarPlay, WarPlayKind, WarTrick,
+    Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, Rank, RummyTrick,
+    ServerWarHand, WarPlay, WarPlayKind, WarTrick,
 };
 
 use crate::OneAction;
 
+type ClientGame = goat_api::ClientGame<Option<WarTrick>, OneAction>;
+type ClientPhase = goat_api::ClientPhase<Option<WarTrick>, OneAction>;
+type WarPhase = goat_api::WarPhase<ClientDeck, ClientWarHand, Option<WarTrick>>;
+
 pub struct Wrapper<T>(pub T);
 struct WrapperContext<T, C>(T, C);
 
-impl<'a> Serialize for Wrapper<&'a ClientGame<Option<WarTrick>, OneAction>> {
+impl<'a> Serialize for Wrapper<&'a ClientGame> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -23,7 +27,7 @@ impl<'a> Serialize for Wrapper<&'a ClientGame<Option<WarTrick>, OneAction>> {
     }
 }
 
-impl<'a> Serialize for Wrapper<&'a ClientPhase<Option<WarTrick>, OneAction>> {
+impl<'a> Serialize for Wrapper<&'a ClientPhase> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -38,8 +42,9 @@ impl<'a> Serialize for Wrapper<&'a ClientPhase<Option<WarTrick>, OneAction>> {
                 let mut ser = ser.serialize_struct("ClientPhase", 6)?;
                 ser.serialize_field("type", "war")?;
                 ser.serialize_field("deck", &war.deck.len())?;
-                ser.serialize_field("hands", &WrapperContext(&*war.hands, &war.trick))?;
+                ser.serialize_field("hands", &WrapperContext(&*war.hands, war))?;
                 ser.serialize_field("won", &Wrapper(&*war.won))?;
+                ser.serialize_field("finished", &war.is_finished())?;
                 ser.serialize_field("currTrick", &WrapperContext(&war.trick, war.hands.len()))?;
                 match &war.prev_trick {
                     Some(trick) => {
@@ -73,7 +78,7 @@ impl<'a> Serialize for Wrapper<&'a ClientPhase<Option<WarTrick>, OneAction>> {
     }
 }
 
-impl<'a, 'b> Serialize for WrapperContext<&'a [ClientWarHand], &'b WarTrick> {
+impl<'a, 'b> Serialize for WrapperContext<&'a [ClientWarHand], &'b WarPhase> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -86,18 +91,18 @@ impl<'a, 'b> Serialize for WrapperContext<&'a [ClientWarHand], &'b WarTrick> {
     }
 }
 
-impl<'a, 'b> Serialize for WrapperContext<&'a ClientWarHand, (PlayerIdx, &'b WarTrick)> {
+impl<'a, 'b> Serialize for WrapperContext<&'a ClientWarHand, (PlayerIdx, &'b WarPhase)> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let hand = self.0;
-        let (idx, trick) = self.1;
+        let (idx, war) = self.1;
         match hand {
             ClientWarHand::Visible(hand) => {
                 let mut ser = ser.serialize_struct("ClientWarHand", 2)?;
                 ser.serialize_field("type", "visible")?;
-                ser.serialize_field("cards", &WrapperContext(hand, (idx, trick)))?;
+                ser.serialize_field("cards", &WrapperContext(hand, (idx, war)))?;
                 ser.end()
             }
             ClientWarHand::Hidden(len) => {
@@ -110,33 +115,33 @@ impl<'a, 'b> Serialize for WrapperContext<&'a ClientWarHand, (PlayerIdx, &'b War
     }
 }
 
-impl<'a, 'b> Serialize for WrapperContext<&'a ServerWarHand, (PlayerIdx, &'a WarTrick)> {
+impl<'a, 'b> Serialize for WrapperContext<&'a ServerWarHand, (PlayerIdx, &'a WarPhase)> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let hand = self.0;
-        let (idx, trick) = self.1;
+        let (idx, war) = self.1;
         let mut ser = ser.serialize_seq(None)?;
         for card in hand.cards() {
-            ser.serialize_element(&WrapperContext(card, (idx, hand, trick)))?;
+            ser.serialize_element(&WrapperContext(card, (idx, hand, war)))?;
         }
         ser.end()
     }
 }
 
-impl<'a> Serialize for WrapperContext<Card, (PlayerIdx, &'a ServerWarHand, &'a WarTrick)> {
+impl<'a> Serialize for WrapperContext<Card, (PlayerIdx, &'a ServerWarHand, &'a WarPhase)> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let card = self.0;
-        let (idx, hand, trick) = self.1;
+        let (idx, hand, war) = self.1;
         let mut ser = ser.serialize_struct("Card", 3)?;
         ser.serialize_field("card", &card)?;
-        let playable = trick.check_can_play(idx, hand, card).is_ok();
+        let playable = !war.is_finished() && war.trick.check_can_play(idx, hand, card).is_ok();
         ser.serialize_field("playable", &playable)?;
-        let sloughable = trick.check_can_slough(idx, hand, card).is_ok();
+        let sloughable = war.trick.check_can_slough(idx, hand, card).is_ok();
         ser.serialize_field("sloughable", &sloughable)?;
         ser.end()
     }

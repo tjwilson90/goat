@@ -135,7 +135,7 @@ fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, s
             | Action::PlayRun { .. }
             | Action::PickUp
             | Action::Goat { .. } => Duration::from_secs(3),
-            Action::Draw | Action::FinishSloughing => Duration::from_millis(200),
+            Action::Draw | Action::FinishTrick => Duration::from_millis(200),
             _ => Duration::ZERO,
         });
         if let Err(e) = bot.run().await {

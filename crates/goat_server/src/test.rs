@@ -45,9 +45,9 @@ macro_rules! top {
                 }
             })*
         );
-        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
-        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
-        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishSloughing { .. }, .. })));
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishTrick { .. }, .. })));
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishTrick { .. }, .. })));
+        assert!(matches!($rx.recv().await, Some(Response::Game { event: Event::FinishTrick { .. }, .. })));
     };
 }
 

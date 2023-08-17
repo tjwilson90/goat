@@ -29,11 +29,27 @@ static PLAYERS: &[PlayerIdx] = &[
 
 #[derive(Clone)]
 pub struct WarTrick {
+    /// The index of the next player in players that needs to play a card.
     next: u8,
+
+    /// The rank of the card currently winning the trick.
     rank: Rank,
+
+    /// The ordered list of players who have/need to play in this round of the
+    /// trick.
     players: SmallVec<[PlayerIdx; 16]>,
+
+    /// The ordered list of players who have played the currently highest card
+    /// in this round of the trick.
     winners: SmallVec<[PlayerIdx; 16]>,
+
+    /// The cards that have been put into the trick from all rounds along with
+    /// the player who played them and whether they were plays/sloughs/plays
+    /// off the top.
     plays: SmallVec<[WarPlay; 12]>,
+
+    /// A bit mask with set bits for each player who has not acknowledged the
+    /// trick as complete.
     end_mask: u16,
 }
 

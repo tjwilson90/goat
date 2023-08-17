@@ -31,30 +31,32 @@ impl<D: Deck, Hand: WarHand, Trick: PreviousTrick> WarPhase<D, Hand, Trick> {
         *hand -= card;
     }
 
-    pub fn end_trick(&mut self, player: PlayerIdx) -> Result<(), GoatError> {
-        let winner = match self.trick.winner() {
-            Some(winner) => winner,
-            None => return Err(GoatError::CannotFinishSloughingIncompleteTrick),
-        };
-        if self.trick.end(player) {
-            let won = &mut self.won[winner.idx()];
-            let num_players = self.hands.len();
-            let trick = mem::replace(&mut self.trick, WarTrick::new(winner, num_players));
-            for card in trick.cards() {
-                *won += card;
-            }
-            self.prev_trick.set(trick);
+    pub fn finish_trick(&mut self, player: PlayerIdx) -> Result<bool, GoatError> {
+        let winner = self.trick.winner();
+        if winner.is_none() && !self.is_finished() {
+            return Err(GoatError::CannotFinishIncompleteTrick);
         }
-        Ok(())
+        let complete_trick = self.trick.end(player);
+        if complete_trick {
+            if let Some(winner) = winner {
+                let won = &mut self.won[winner.idx()];
+                let num_players = self.hands.len();
+                let trick = mem::replace(&mut self.trick, WarTrick::new(winner, num_players));
+                for card in trick.cards() {
+                    *won += card;
+                }
+                self.prev_trick.set(trick);
+            }
+        }
+        Ok(complete_trick)
     }
 
     pub fn is_finished(&self) -> bool {
-        if !self.deck.is_empty() || self.trick.winner().is_some() {
-            return false;
-        }
-        self.trick
-            .remaining_players()
-            .any(|p| self.hands[p.idx()].is_empty())
+        self.deck.is_empty()
+            && self
+                .trick
+                .remaining_players()
+                .any(|p| self.hands[p.idx()].is_empty())
     }
 
     pub fn switch_to_rummy<History: RummyHistory>(

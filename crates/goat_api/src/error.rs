@@ -8,12 +8,17 @@ pub enum GoatError {
     CannotDrawFromEmptyDeck,
     #[error("Players cannot hold more than three cards at once")]
     CannotDrawMoreThanThreeCards,
-    #[error("Players cannot finish sloughing on a trick until is is complete")]
-    CannotFinishSloughingIncompleteTrick,
+    #[error("Players cannot finish a trick until is is complete")]
+    CannotFinishIncompleteTrick,
     #[error("Picking up cards from an emoty trick is not possible")]
     CannotPickUpFromEmptyTrick,
     #[error("Playing from the top of the deck is not possible when the deck is empty")]
     CannotPlayFromEmptyDeck,
+    #[error(
+        "Playing on a trick that not all remaining players will be able \
+        to play on is not possible"
+    )]
+    CannotPlayOnFinishedTrick,
     #[error("A range starting with {lo} cannot be played on the current trick")]
     CannotPlayRange { lo: Card },
     #[error("Players cannot slough on a trick after they have finished sloughing")]

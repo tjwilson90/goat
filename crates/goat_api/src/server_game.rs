@@ -21,18 +21,6 @@ pub enum ServerPhase {
     Goat(GoatPhase),
 }
 
-macro_rules! switch_if_finished {
-    ($self:ident, $war:ident, $events:ident, $seed:ident) => {
-        if $war.is_finished() {
-            let trump = $war.deck[0];
-            $events.push(Event::RevealTrump { trump });
-            let mut rummy = $war.switch_to_rummy(trump);
-            rummy.distribute_dreck($events, $seed);
-            $self.phase = ServerPhase::Rummy(rummy);
-        }
-    };
-}
-
 impl ServerGame {
     pub fn new(seed: u64) -> Self {
         Self {
@@ -99,16 +87,18 @@ impl ServerGame {
             }
             Action::PlayCard { card } => {
                 let player = self.player(user_id)?;
-                let (war, events, seed) = self.war()?;
+                let (war, events, _) = self.war()?;
+                if war.is_finished() {
+                    return Err(GoatError::CannotPlayOnFinishedTrick);
+                }
                 let hand = &war.hands[player.idx()];
                 war.trick.check_can_play(player, hand, card)?;
                 war.play_from_hand(player, card);
                 events.push(Event::PlayCard { card });
-                switch_if_finished!(self, war, events, seed);
             }
             Action::PlayTop => {
                 let player = self.player(user_id)?;
-                let (war, events, seed) = self.war()?;
+                let (war, events, _) = self.war()?;
                 if war.deck.len() <= 1 {
                     return Err(GoatError::CannotPlayFromEmptyDeck);
                 }
@@ -117,20 +107,18 @@ impl ServerGame {
                 let card = war.deck.pop().unwrap();
                 war.play_from_top(card);
                 events.push(Event::PlayTop { card });
-                switch_if_finished!(self, war, events, seed);
             }
             Action::Slough { card } => {
                 let player = self.player(user_id)?;
-                let (war, events, seed) = self.war()?;
+                let (war, events, _) = self.war()?;
                 let hand = &war.hands[player.idx()];
                 war.trick.check_can_slough(player, hand, card)?;
                 war.slough(player, card);
                 events.push(Event::Slough { player, card });
-                switch_if_finished!(self, war, events, seed);
             }
             Action::Draw => {
                 let player = self.player(user_id)?;
-                let (war, events, seed) = self.war()?;
+                let (war, events, _) = self.war()?;
                 let hand = &mut war.hands[player.idx()];
                 if hand.len() == 3 {
                     return Err(GoatError::CannotDrawMoreThanThreeCards);
@@ -141,14 +129,19 @@ impl ServerGame {
                 let card = war.deck.pop().unwrap();
                 *hand += card;
                 events.push(Event::Draw { player, card });
-                switch_if_finished!(self, war, events, seed);
             }
-            Action::FinishSloughing => {
+            Action::FinishTrick => {
                 let player = self.player(user_id)?;
                 let (war, events, seed) = self.war()?;
-                war.end_trick(player)?;
-                events.push(Event::FinishSloughing { player });
-                switch_if_finished!(self, war, events, seed);
+                let complete = war.finish_trick(player)?;
+                events.push(Event::FinishTrick { player });
+                if complete && war.is_finished() {
+                    let trump = war.deck[0];
+                    events.push(Event::RevealTrump { trump });
+                    let mut rummy = war.switch_to_rummy(trump);
+                    rummy.distribute_dreck(events, seed);
+                    self.phase = ServerPhase::Rummy(rummy);
+                }
             }
             Action::PlayRun { lo, hi } => {
                 let player = self.player(user_id)?;

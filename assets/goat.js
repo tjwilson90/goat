@@ -125,8 +125,8 @@ function updateWarGame(gameId, game, gameElem) {
         drawElem.disabled = game.phase.deck <= 0
             || game.phase.hands[index].cards.length >= 3;
 
-        const finishSloughingElem = gameElem.querySelector(".finish-sloughing");
-        finishSloughingElem.disabled = game.phase.currTrick.winner === undefined
+        const finishTrickElem = gameElem.querySelector(".finish-trick");
+        finishTrickElem.disabled = (!game.phase.finished && game.phase.currTrick.winner === undefined)
             || (game.phase.currTrick.endMask & (1 << index)) === 0;
 
         const playsElem = gameElem.querySelector(".my-plays");
@@ -428,9 +428,9 @@ function warGameActionsElement(gameId) {
                         ]
                     }),
                     createElement("button", {
-                        classList: ["finish-sloughing"],
-                        textContent: "Finish Sloughing",
-                        listeners: {click: (event) => finishSloughing(gameId)}
+                        classList: ["finish-trick"],
+                        textContent: "Finish Trick",
+                        listeners: {click: (event) => finishTrick(gameId)}
                     }),
                 ]
             }),
@@ -741,8 +741,8 @@ export function draw(gameId) {
     applyAction(gameId, `{"type":"draw"}`);
 }
 
-export function finishSloughing(gameId) {
-    applyAction(gameId, `{"type":"finishSloughing"}`);
+export function finishTrick(gameId) {
+    applyAction(gameId, `{"type":"finishTrick"}`);
 }
 
 export function playRunOne(gameId) {

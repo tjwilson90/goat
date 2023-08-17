@@ -64,9 +64,9 @@ impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, Hist
                 war.deck.draw();
                 war.hands[player.idx()] += card;
             }
-            Event::FinishSloughing { player } => {
+            Event::FinishTrick { player } => {
                 let war = self.war()?;
-                war.end_trick(player)?;
+                war.finish_trick(player)?;
             }
             Event::RevealTrump { trump } => {
                 let war = self.war()?;
