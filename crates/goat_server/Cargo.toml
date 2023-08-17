@@ -4,19 +4,19 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-env_logger = "*"
-futures-util = "*"
+env_logger = "0.10"
+futures-util = "0.3"
 goat_api = { path = "../goat_api" }
 goat_bot = { path = "../goat_bot" }
-log = "*"
-parking_lot = "*"
-rand = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-sha2 = { version = "*", features = ["asm"] }
-smallvec = { version = "*", features = ["union"] }
-thiserror = "*"
-tokio = { version = "*", features = ["macros", "parking_lot", "rt-multi-thread", "sync", "time"] }
-tokio-stream = "*"
-uuid = "*"
-warp = { version = "*", default-features = false }
+log = "0.4"
+parking_lot = "0.12"
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = { version = "0.10", features = ["asm"] }
+smallvec = { version = "1.11", features = ["union"] }
+thiserror = "1.0"
+tokio = { version = "1.32", features = ["macros", "parking_lot", "rt-multi-thread", "sync", "time"] }
+tokio-stream = "0.1"
+uuid = "1.4"
+warp = { version = "0.3", default-features = false }
