@@ -22,7 +22,7 @@ pub enum ServerPhase {
 }
 
 impl ServerGame {
-    pub fn new(seed: u64) -> Self {
+    pub fn with_seed(seed: u64) -> Self {
         Self {
             phase: ServerPhase::Unstarted,
             players: Vec::with_capacity(4),
@@ -174,6 +174,7 @@ impl ServerGame {
         Ok(())
     }
 
+    #[allow(clippy::type_complexity)]
     fn war(
         &mut self,
     ) -> Result<

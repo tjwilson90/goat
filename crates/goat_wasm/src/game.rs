@@ -115,7 +115,7 @@ impl<'a, 'b> Serialize for WrapperContext<&'a ClientWarHand, (PlayerIdx, &'b War
     }
 }
 
-impl<'a, 'b> Serialize for WrapperContext<&'a ServerWarHand, (PlayerIdx, &'a WarPhase)> {
+impl<'a> Serialize for WrapperContext<&'a ServerWarHand, (PlayerIdx, &'a WarPhase)> {
     fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

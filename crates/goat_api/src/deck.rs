@@ -18,21 +18,25 @@ pub struct ClientDeck(u8);
 
 impl ClientDeck {
     pub fn new(num_decks: u8) -> Self {
-        Self(num_decks * 52)
+        Self(52 * num_decks - 1)
     }
 
     pub fn draw(&mut self) {
         self.0 -= 1;
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
     pub fn len(&self) -> u8 {
-        self.0 - 1
+        self.0
     }
 }
 
 impl Deck for ClientDeck {
     fn is_empty(&self) -> bool {
-        self.0 == 1
+        self.0 == 0
     }
 }
 

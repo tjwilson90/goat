@@ -80,7 +80,7 @@ macro_rules! pick_up {
 
 #[tokio::test]
 async fn test_play_top_deterministic() -> Result<(), GoatError> {
-    let server = Arc::new(Server::new());
+    let server = Arc::new(Server::default());
     let watcher = UserId(Uuid::new_v4());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
     expect!(
@@ -259,7 +259,7 @@ async fn test_bots() -> Result<(), GoatError> {
         .filter_level(LevelFilter::Info)
         .is_test(true)
         .try_init();
-    let server = Arc::new(Server::new());
+    let server = Arc::new(Server::default());
     let watcher = UserId(Uuid::new_v4());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
     let mut client: Client<(), (), ()> = Client::new(());

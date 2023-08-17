@@ -22,21 +22,26 @@ struct ServerUser {
     subs: SmallVec<[Subscriber; 1]>,
 }
 
-impl Server {
-    pub fn new() -> Self {
+impl Default for Server {
+    fn default() -> Self {
         Self {
             games: RwLock::new(HashMap::new()),
             users: Mutex::new(HashMap::new()),
         }
     }
+}
 
+impl Server {
     pub fn new_game(&self, seed: u64) -> GameId {
         let game_id = GameId(Uuid::new_v4());
         let mut games = self.games.write();
-        games.insert(game_id, Mutex::new((ServerGame::new(seed), Instant::now())));
+        games.insert(
+            game_id,
+            Mutex::new((ServerGame::with_seed(seed), Instant::now())),
+        );
         let mut users = self.users.lock();
         broadcast(
-            &mut *users,
+            &mut users,
             [Response::Replay {
                 game_id,
                 events: Vec::new(),
@@ -69,7 +74,7 @@ impl Server {
         };
         if let Some(online) = result {
             broadcast(
-                &mut *users,
+                &mut users,
                 [Response::User {
                     user_id,
                     user: User { name, online },
@@ -99,8 +104,8 @@ impl Server {
         let mut users = self.users.lock();
         broadcast_events(
             game_id,
-            &*game,
-            &mut *users,
+            game,
+            &mut users,
             game.events[index..].iter().cloned(),
         );
         Ok(())
@@ -128,7 +133,7 @@ impl Server {
         if name != user.name || user.subs.len() == 1 {
             user.name = name.clone();
             broadcast(
-                &mut *users,
+                &mut users,
                 [Response::User {
                     user_id,
                     user: User { name, online: true },
@@ -154,7 +159,7 @@ impl Server {
 
     pub fn ping_subscribers(&self) {
         let mut users = self.users.lock();
-        broadcast(&mut *users, [Response::Ping].iter().cloned());
+        broadcast(&mut users, [Response::Ping].iter().cloned());
     }
 
     pub fn forget_old_state(
@@ -187,7 +192,7 @@ impl Server {
         let mut users = self.users.lock();
         if !drops.is_empty() {
             broadcast(
-                &mut *users,
+                &mut users,
                 drops
                     .into_iter()
                     .map(|game_id| Response::ForgetGame { game_id }),
@@ -204,7 +209,7 @@ impl Server {
         });
         if !drops.is_empty() {
             broadcast(
-                &mut *users,
+                &mut users,
                 drops
                     .into_iter()
                     .map(|user_id| Response::ForgetUser { user_id }),

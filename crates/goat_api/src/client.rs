@@ -21,7 +21,7 @@ impl<Users: UserDb, PrevTrick: PreviousTrick, History: RummyHistory>
         match response {
             Response::Ping => {}
             Response::Replay { game_id, events } => {
-                let mut game = ClientGame::new();
+                let mut game = ClientGame::default();
                 for event in events {
                     game.apply(event)?;
                 }

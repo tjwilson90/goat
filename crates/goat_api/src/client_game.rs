@@ -19,14 +19,16 @@ pub enum ClientPhase<PrevTrick, History> {
     Goat(GoatPhase),
 }
 
-impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, History> {
-    pub fn new() -> Self {
+impl<PrevTrick, History> Default for ClientGame<PrevTrick, History> {
+    fn default() -> Self {
         Self {
             phase: ClientPhase::Unstarted,
             players: Vec::new(),
         }
     }
+}
 
+impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, History> {
     pub fn apply(&mut self, event: Event) -> Result<(), GoatError> {
         match event {
             Event::Join { user_id } => {

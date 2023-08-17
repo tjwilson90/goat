@@ -24,7 +24,7 @@ impl RummyTrick {
     }
 
     pub fn plays(&self) -> &[(Card, Card)] {
-        &*self.plays
+        &self.plays
     }
 
     pub fn top_card(&self) -> Option<Card> {

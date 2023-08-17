@@ -14,6 +14,7 @@ pub struct Client {
 
 #[wasm_bindgen]
 impl Client {
+    #[allow(clippy::new_without_default)]
     #[wasm_bindgen(constructor)]
     pub fn new() -> Client {
         Self {

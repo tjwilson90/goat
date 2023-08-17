@@ -147,7 +147,7 @@ fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, s
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    let state = &*Box::leak(Box::new(Server::new()));
+    let state: &Server = &*Box::leak(Box::default());
 
     tokio::spawn(async move {
         let mut ticker = time::interval(Duration::from_secs(20));

@@ -1,6 +1,6 @@
 use goat_api::{
-    Action, Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, Deck, PlayerIdx, Rank,
-    RummyHand, RummyPhase, Suit, WarHand, WarPhase,
+    Action, Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, Rank, RummyHand,
+    RummyPhase, Suit, WarHand, WarPhase,
 };
 
 pub trait Strategy {

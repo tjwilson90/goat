@@ -9,9 +9,7 @@ pub trait RummyHistory {
 }
 
 impl RummyHistory for () {
-    fn new(_: usize) -> Self {
-        ()
-    }
+    fn new(_: usize) -> Self {}
 
     fn lead(&mut self, _: PlayerIdx, _: Card, _: Card) {}
 

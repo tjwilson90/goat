@@ -6,9 +6,7 @@ pub trait PreviousTrick {
 }
 
 impl PreviousTrick for () {
-    fn empty() -> Self {
-        ()
-    }
+    fn empty() -> Self {}
 
     fn set(&mut self, _: WarTrick) {}
 }

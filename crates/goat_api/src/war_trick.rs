@@ -124,15 +124,14 @@ impl WarTrick {
             if self.players[self.next as usize..].contains(&player) {
                 return Err(GoatError::IllegalSlough { card });
             }
-        } else {
-            if !self
-                .plays
-                .iter()
-                .any(|play| play.card.rank() == card.rank())
-            {
-                return Err(GoatError::IllegalSlough { card });
-            }
+        } else if !self
+            .plays
+            .iter()
+            .any(|play| play.card.rank() == card.rank())
+        {
+            return Err(GoatError::IllegalSlough { card });
         }
+
         Ok(())
     }
 
@@ -207,7 +206,7 @@ impl WarTrick {
     }
 
     pub fn plays(&self) -> &[WarPlay] {
-        &*self.plays
+        &self.plays
     }
 }
 

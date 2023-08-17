@@ -305,7 +305,7 @@ impl Iterator for CardsIter {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.0.len() as usize;
+        let size = self.0.len();
         (size, Some(size))
     }
 }
