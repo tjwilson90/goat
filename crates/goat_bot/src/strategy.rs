@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 type WarPhase = goat_api::WarPhase<ClientDeck, ClientWarHand, ()>;
 type RummyPhase = goat_api::RummyPhase<ClientRummyHand, Cards>;
 
-pub trait Strategy {
+pub trait Strategy: Send + Sync + 'static {
     fn war(&self, idx: PlayerIdx, war: &WarPhase) -> Option<Action>;
     fn rummy(&self, rummy: &RummyPhase) -> Action;
 }

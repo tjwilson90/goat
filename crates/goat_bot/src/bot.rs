@@ -20,7 +20,7 @@ pub struct Bot<Tx, S> {
 }
 
 impl<
-        Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError> + Clone + Send + 'static,
+        Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError> + Clone + Send + Sync + 'static,
         S: Strategy,
     > Bot<Tx, S>
 {
@@ -61,7 +61,7 @@ impl<
             }
             for game_id in changed.drain() {
                 let start = Instant::now();
-                if let Some(action) = self.action(game_id) {
+                if let Some(action) = self.action(game_id).await {
                     let mut duration = (self.sleep)(action);
                     duration = duration.saturating_sub(start.elapsed());
                     if duration == Duration::ZERO {
@@ -79,7 +79,7 @@ impl<
         }
     }
 
-    fn action(&self, game_id: GameId) -> Option<Action> {
+    async fn action(&self, game_id: GameId) -> Option<Action> {
         let game = self.client.games.get(&game_id)?;
         let idx = game.players.iter().position(|id| *id == self.user_id)?;
         let idx = PlayerIdx(idx as u8);
@@ -88,7 +88,13 @@ impl<
             ClientPhase::War(war) => self.strategy.war(idx, war),
             ClientPhase::Rummy(rummy) => {
                 if rummy.next == idx {
-                    Some(self.strategy.rummy(rummy))
+                    let (tx, rx) = tokio::sync::oneshot::channel();
+                    rayon::scope(|scope| {
+                        scope.spawn(|_| {
+                            tx.send(self.strategy.rummy(rummy)).unwrap();
+                        });
+                    });
+                    Some(rx.await.unwrap())
                 } else {
                     None
                 }

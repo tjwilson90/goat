@@ -14,7 +14,7 @@ use goat_bot::{Bot, CoverSimple, DuckSimple, PlayTopSimple, Strategy};
 
 use crate::Server;
 
-fn run_bot<S: Strategy + Send + 'static>(state: Arc<Server>, name: String, strategy: S) -> UserId {
+fn run_bot<S: Strategy>(state: Arc<Server>, name: String, strategy: S) -> UserId {
     let user_id = UserId(Uuid::new_v4());
     let rx = state.subscribe(user_id, name);
     tokio::spawn(async move {

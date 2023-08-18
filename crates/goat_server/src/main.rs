@@ -122,7 +122,7 @@ fn subscribe(
         .map(handle)
 }
 
-fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, strategy: S) {
+fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
         let hash = Sha256::digest(name.as_bytes());
         let user_id = UserId(Uuid::from_slice(&hash[16..]).unwrap());
