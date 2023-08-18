@@ -34,7 +34,7 @@ jobs:
         run: cargo build --bins --target x86_64-unknown-linux-musl --release
 
       - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.3.0
+        uses: jetli/wasm-pack-action@v0.4.0
         with:
           version: 'latest'
 
@@ -46,7 +46,7 @@ jobs:
 
       - name: Deploy dist
         if: github.ref == 'refs/heads/develop'
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Run dist
         if: github.ref == 'refs/heads/develop'
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -69,7 +69,7 @@ jobs:
           script: /opt/deploy-goat.sh
 
       - name: Upload dist
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v3
         with:
           name: goat.tgz
           path: build/goat.tgz
