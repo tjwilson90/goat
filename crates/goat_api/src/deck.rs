@@ -3,13 +3,13 @@ use std::fmt::Debug;
 
 use crate::Card;
 
-pub trait Deck {
-    fn is_empty(&self) -> bool;
+pub trait Deck: Debug {
+    fn cards_remaining(&self) -> usize;
 }
 
 impl Deck for Vec<Card> {
-    fn is_empty(&self) -> bool {
-        self.len() == 1
+    fn cards_remaining(&self) -> usize {
+        self.len() - 1
     }
 }
 
@@ -24,19 +24,11 @@ impl ClientDeck {
     pub fn draw(&mut self) {
         self.0 -= 1;
     }
-
-    pub fn is_empty(&self) -> bool {
-        self.0 == 0
-    }
-
-    pub fn len(&self) -> u8 {
-        self.0
-    }
 }
 
 impl Deck for ClientDeck {
-    fn is_empty(&self) -> bool {
-        self.0 == 0
+    fn cards_remaining(&self) -> usize {
+        self.0 as usize
     }
 }
 

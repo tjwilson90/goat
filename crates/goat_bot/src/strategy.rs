@@ -1,6 +1,6 @@
 use goat_api::{
-    Action, Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, Rank, RummyHand,
-    RummyPhase, Suit, WarHand, WarPhase,
+    Action, Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, Deck, PlayerIdx, Rank,
+    RummyHand, RummyPhase, Suit, WarHand, WarPhase,
 };
 
 pub trait Strategy {
@@ -34,7 +34,7 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -
         ClientWarHand::Visible(hand) => hand,
         _ => panic!("bot hand is hidden"),
     };
-    if hand.len() < 3 && !war.deck.is_empty() {
+    if hand.len() < 3 && war.deck.cards_remaining() > 0 {
         return Some(Action::Draw);
     }
     for card in hand.cards() {
@@ -60,7 +60,7 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -
             .max_by_key(|c| c.rank())
         {
             Some(Action::PlayCard { card })
-        } else if !war.deck.is_empty() {
+        } else if war.deck.cards_remaining() > 0 {
             Some(Action::PlayTop)
         } else {
             let card = hand.cards().min_by_key(|c| c.rank()).unwrap();
@@ -68,7 +68,7 @@ pub fn war_duck(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -
         }
     } else {
         let card = hand.cards().min_by_key(|c| c.rank()).unwrap();
-        if war.deck.is_empty() || card.rank() < Rank::Six {
+        if war.deck.cards_remaining() == 0 || card.rank() < Rank::Six {
             Some(Action::PlayCard { card })
         } else {
             Some(Action::PlayTop)
@@ -82,7 +82,7 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
         ClientWarHand::Visible(hand) => hand,
         _ => panic!("bot hand is hidden"),
     };
-    if hand.len() < 3 && !war.deck.is_empty() {
+    if hand.len() < 3 && war.deck.cards_remaining() > 0 {
         return Some(Action::Draw);
     }
     for card in hand.cards() {
@@ -108,7 +108,7 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
             .min_by_key(|c| c.rank())
         {
             Some(Action::PlayCard { card })
-        } else if !war.deck.is_empty() {
+        } else if war.deck.cards_remaining() > 0 {
             Some(Action::PlayTop)
         } else {
             let card = hand.cards().min_by_key(|c| c.rank()).unwrap();
@@ -116,7 +116,7 @@ pub fn war_cover(idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) 
         }
     } else {
         let card = hand.cards().max_by_key(|c| c.rank()).unwrap();
-        if war.deck.is_empty() || card.rank() > Rank::Ten {
+        if war.deck.cards_remaining() == 0 || card.rank() > Rank::Ten {
             Some(Action::PlayCard { card })
         } else {
             Some(Action::PlayTop)

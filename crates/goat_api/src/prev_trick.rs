@@ -1,6 +1,7 @@
 use crate::WarTrick;
+use std::fmt::Debug;
 
-pub trait PreviousTrick {
+pub trait PreviousTrick: Debug {
     fn empty() -> Self;
     fn set(&mut self, trick: WarTrick);
 }

@@ -2,7 +2,7 @@ use serde::ser::{SerializeSeq, SerializeStruct};
 use serde::{Serialize, Serializer};
 
 use goat_api::{
-    Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, Rank, RummyTrick,
+    Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, Deck, PlayerIdx, Rank, RummyTrick,
     ServerWarHand, WarPlay, WarPlayKind, WarTrick,
 };
 
@@ -41,7 +41,7 @@ impl<'a> Serialize for Wrapper<&'a ClientPhase> {
             ClientPhase::War(war) => {
                 let mut ser = ser.serialize_struct("ClientPhase", 6)?;
                 ser.serialize_field("type", "war")?;
-                ser.serialize_field("deck", &war.deck.len())?;
+                ser.serialize_field("deck", &war.deck.cards_remaining())?;
                 ser.serialize_field("hands", &WrapperContext(&*war.hands, war))?;
                 ser.serialize_field("won", &Wrapper(&*war.won))?;
                 ser.serialize_field("finished", &war.is_finished())?;

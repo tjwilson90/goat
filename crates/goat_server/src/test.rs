@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use log::LevelFilter;
 use rand::RngCore;
+use tokio::time::timeout;
 use uuid::Uuid;
 
 use goat_api::{
@@ -267,7 +268,7 @@ async fn test_bots() -> Result<(), GoatError> {
     let duck = run_bot(server.clone(), "duck".to_string(), DuckSimple);
     let top = run_bot(server.clone(), "top".to_string(), PlayTopSimple);
     let mut goat_count = HashMap::new();
-    for _ in 0..1000 {
+    for _ in 0..10000 {
         let game_id = server.new_game(rand::thread_rng().next_u64());
         server.apply_action(watcher, game_id, Action::Join { user_id: cover })?;
         server.apply_action(watcher, game_id, Action::Join { user_id: duck })?;
@@ -282,7 +283,10 @@ async fn test_bots() -> Result<(), GoatError> {
                 *goat_count.entry(goat.goat).or_insert(0) += 1;
                 break;
             }
-            let response = rx.recv().await.unwrap();
+            let response = timeout(Duration::from_secs(1), rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
             client.apply(response)?;
         }
         server.forget_old_state(Duration::ZERO, Duration::ZERO, Duration::ZERO);

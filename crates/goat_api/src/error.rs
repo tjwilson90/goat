@@ -8,7 +8,7 @@ pub enum GoatError {
     CannotDrawFromEmptyDeck,
     #[error("Players cannot hold more than three cards at once")]
     CannotDrawMoreThanThreeCards,
-    #[error("Players cannot finish a trick until is is complete")]
+    #[error("Players cannot finish a trick until it is complete")]
     CannotFinishIncompleteTrick,
     #[error("Picking up cards from an emoty trick is not possible")]
     CannotPickUpFromEmptyTrick,

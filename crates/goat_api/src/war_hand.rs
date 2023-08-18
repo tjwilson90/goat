@@ -4,7 +4,7 @@ use std::ops::{AddAssign, SubAssign};
 
 use crate::{Card, Cards, ClientRummyHand, GoatError, RummyHand};
 
-pub trait WarHand: AddAssign<Card> + SubAssign<Card> {
+pub trait WarHand: AddAssign<Card> + SubAssign<Card> + Debug {
     type RummyHand: RummyHand;
 
     fn new() -> Self;
@@ -76,13 +76,10 @@ impl AddAssign<Card> for ServerWarHand {
 
 impl SubAssign<Card> for ServerWarHand {
     fn sub_assign(&mut self, rhs: Card) {
-        for i in 0..3 {
-            if self.cards[i] == Some(rhs) {
-                self.cards.swap(i, 2);
-                self.cards[2] = None;
-                return;
-            }
-        }
+        let idx = self.cards.iter().position(|c| *c == Some(rhs)).unwrap();
+        #[allow(clippy::suspicious_op_assign_impl)]
+        self.cards.copy_within(idx + 1.., idx);
+        self.cards[2] = None;
     }
 }
 

@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::mem;
 
 use crate::{
@@ -52,7 +53,7 @@ impl<D: Deck, Hand: WarHand, Trick: PreviousTrick> WarPhase<D, Hand, Trick> {
     }
 
     pub fn is_finished(&self) -> bool {
-        self.deck.is_empty()
+        self.deck.cards_remaining() == 0
             && self
                 .trick
                 .remaining_players()
