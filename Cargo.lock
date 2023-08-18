@@ -369,6 +369,7 @@ dependencies = [
  "log",
  "parking_lot",
  "rand",
+ "rayon",
  "serde",
  "serde_json",
  "sha2",
