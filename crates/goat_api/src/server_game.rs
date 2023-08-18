@@ -74,7 +74,7 @@ impl ServerGame {
                     return Err(GoatError::InvalidNumberOfDecks);
                 }
                 let num_players = self.players.len();
-                let mut deck: Vec<_> = (Cards::ONE_DECK * num_decks as usize).into_iter().collect();
+                let mut deck: Vec<_> = (Cards::ONE_DECK * num_decks as usize).cards().collect();
                 deck.shuffle(&mut StdRng::seed_from_u64(self.seed));
                 self.phase = ServerPhase::War(WarPhase {
                     deck,

@@ -1,4 +1,4 @@
-use crate::{Card, PlayerIdx};
+use crate::{Card, Cards, PlayerIdx};
 
 pub trait RummyHistory {
     fn new(num_players: usize) -> Self;
@@ -18,4 +18,26 @@ impl RummyHistory for () {
     fn kill(&mut self, _: PlayerIdx, _: Card, _: Card) {}
 
     fn pick_up(&mut self, _: PlayerIdx, _: Card, _: Card) {}
+}
+
+impl RummyHistory for Cards {
+    fn new(_: usize) -> Self {
+        Cards::NONE
+    }
+
+    fn lead(&mut self, _: PlayerIdx, lo: Card, hi: Card) {
+        *self += Cards::range(lo, hi);
+    }
+
+    fn play(&mut self, _: PlayerIdx, lo: Card, hi: Card) {
+        *self += Cards::range(lo, hi);
+    }
+
+    fn kill(&mut self, _: PlayerIdx, lo: Card, hi: Card) {
+        *self += Cards::range(lo, hi);
+    }
+
+    fn pick_up(&mut self, _: PlayerIdx, lo: Card, hi: Card) {
+        *self -= Cards::range(lo, hi);
+    }
 }

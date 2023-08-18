@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::{Card, PlayerIdx, UserId};
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 pub enum Action {

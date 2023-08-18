@@ -2,14 +2,16 @@ use std::collections::HashSet;
 
 use rand::Rng;
 use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::time::Duration;
+use tokio::time::{Duration, Instant};
 
-use goat_api::{Action, Client, ClientPhase, GameId, GoatError, PlayerIdx, Response, UserId};
+use goat_api::{
+    Action, Cards, Client, ClientPhase, GameId, GoatError, PlayerIdx, Response, UserId,
+};
 
 use crate::Strategy;
 
 pub struct Bot<Tx, S> {
-    client: Client<(), (), ()>,
+    client: Client<(), (), Cards>,
     user_id: UserId,
     rx: UnboundedReceiver<Response>,
     tx: Tx,
@@ -58,8 +60,10 @@ impl<
                 log::debug!("state {}: {:?}", self.user_id, self.client.games);
             }
             for game_id in changed.drain() {
+                let start = Instant::now();
                 if let Some(action) = self.action(game_id) {
-                    let duration = (self.sleep)(action);
+                    let mut duration = (self.sleep)(action);
+                    duration = duration.saturating_sub(start.elapsed());
                     if duration == Duration::ZERO {
                         let _ = (self.tx)(self.user_id, game_id, action);
                     } else {
@@ -84,7 +88,7 @@ impl<
             ClientPhase::War(war) => self.strategy.war(idx, war),
             ClientPhase::Rummy(rummy) => {
                 if rummy.next == idx {
-                    Some(self.strategy.rummy(idx, rummy))
+                    Some(self.strategy.rummy(rummy))
                 } else {
                     None
                 }

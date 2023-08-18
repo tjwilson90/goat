@@ -1,8 +1,7 @@
 use core::mem;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
-
-use itertools::Itertools;
 
 use crate::{
     Card, Cards, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, PlayerIdx, Rank,
@@ -70,7 +69,7 @@ fn cards_max() {
 fn cards_iter() {
     assert_eq!(
         (Card::QueenSpades + Card::AceHearts + Card::TenClubs + Card::JackDiamonds)
-            .into_iter()
+            .cards()
             .collect::<Vec<_>>(),
         vec![
             Card::QueenSpades,
@@ -89,9 +88,9 @@ fn cards_parse() {
 #[test]
 fn cards_contains() {
     let cards = Cards::CLUBS + Cards::CLUBS + Card::ThreeClubs + Card::FourClubs;
-    for cards in cards.into_iter().combinations(5) {
+    for cards in cards.cards().combinations(5) {
         let compact: Cards = cards.iter().cloned().collect();
-        for card in Cards::ONE_DECK.into_iter() {
+        for card in Cards::ONE_DECK.cards() {
             assert_eq!(cards.contains(&card), compact.contains(card));
         }
     }
@@ -99,16 +98,16 @@ fn cards_contains() {
 
 #[test]
 fn cards_contains_any() {
-    let left = c!(88777S 42H AAD).into_iter();
-    let right = c!(88777S 42H AAD).into_iter();
+    let left = c!(88777S 42H AAD).cards();
+    let right = c!(88777S 42H AAD).cards();
     for left in left.powerset() {
         let left = Cards::from_iter(left);
-        let left_set: HashSet<_> = left.into_iter().collect();
+        let left_set: HashSet<_> = left.cards().collect();
         for right in right.clone().powerset() {
             let right = Cards::from_iter(right);
             assert_eq!(
                 left.contains_any(right),
-                right.into_iter().any(|c| left_set.contains(&c)),
+                right.cards().any(|c| left_set.contains(&c)),
                 "left={}, right={}",
                 left,
                 right,
@@ -119,25 +118,24 @@ fn cards_contains_any() {
 
 #[test]
 fn cards_contains_all() {
-    let left = c!(88777S 42H AAD).into_iter();
-    let right = c!(88777S 42H AAD).into_iter();
+    let left = c!(88777S 42H AAD).cards();
+    let right = c!(88777S 42H AAD).cards();
     for left in left.powerset() {
         let left = Cards::from_iter(left);
-        let left_map: HashMap<Card, usize> = left.into_iter().fold(HashMap::new(), |mut m, c| {
+        let left_map: HashMap<Card, usize> = left.cards().fold(HashMap::new(), |mut m, c| {
             *m.entry(c).or_default() += 1;
             m
         });
         for right in right.clone().powerset() {
             let right = Cards::from_iter(right);
-            let right_map: HashMap<Card, usize> =
-                right.into_iter().fold(HashMap::new(), |mut m, c| {
-                    *m.entry(c).or_default() += 1;
-                    m
-                });
+            let right_map: HashMap<Card, usize> = right.cards().fold(HashMap::new(), |mut m, c| {
+                *m.entry(c).or_default() += 1;
+                m
+            });
             assert_eq!(
                 left.contains_all(right),
                 right
-                    .into_iter()
+                    .cards()
                     .all(|c| left_map.get(&c).unwrap_or(&0) >= right_map.get(&c).unwrap_or(&0)),
                 "left={}, right={}, left_map={:?}, right_map={:?}",
                 left,
@@ -147,6 +145,19 @@ fn cards_contains_all() {
             );
         }
     }
+}
+
+#[test]
+fn cards_top_of_run() {
+    assert_eq!(c!(6432S).top_of_run(Card::TwoSpades), Card::FourSpades);
+    assert_eq!(
+        c!(TTT88766555332H).top_of_run(Card::SixHearts),
+        Card::EightHearts
+    );
+    assert_eq!(
+        c!(2S 2H 2D AKKQJJJT99888765433222C).top_of_run(Card::ThreeClubs),
+        Card::AceClubs
+    );
 }
 
 #[test]
@@ -188,7 +199,7 @@ fn war_trick_rank_winner_next() {
 fn war_trick_can_slough() {
     let num_players = 3;
     let mut t = WarTrick::new(PlayerIdx(2), num_players as usize);
-    for card in Cards::ONE_DECK {
+    for card in Cards::ONE_DECK.cards() {
         let hand = &mut ServerWarHand::new();
         *hand += card;
         for player in 0..num_players {
@@ -196,7 +207,7 @@ fn war_trick_can_slough() {
         }
     }
     t.play(WarPlayKind::PlayHand, Card::TwoClubs);
-    for card in Cards::ONE_DECK {
+    for card in Cards::ONE_DECK.cards() {
         let hand = &mut ServerWarHand::new();
         *hand += card;
         for player in 0..num_players {
@@ -207,7 +218,7 @@ fn war_trick_can_slough() {
         }
     }
     t.play(WarPlayKind::PlayHand, Card::FiveClubs);
-    for card in Cards::ONE_DECK {
+    for card in Cards::ONE_DECK.cards() {
         let hand = &mut ServerWarHand::new();
         *hand += card;
         for player in 0..num_players {
@@ -219,7 +230,7 @@ fn war_trick_can_slough() {
         }
     }
     t.play(WarPlayKind::PlayHand, Card::FiveDiamonds);
-    for card in Cards::ONE_DECK {
+    for card in Cards::ONE_DECK.cards() {
         let hand = &mut ServerWarHand::new();
         *hand += card;
         for player in 0..num_players {
@@ -230,7 +241,7 @@ fn war_trick_can_slough() {
         }
     }
     t.play(WarPlayKind::PlayHand, Card::ThreeClubs);
-    for card in Cards::ONE_DECK {
+    for card in Cards::ONE_DECK.cards() {
         let hand = &mut ServerWarHand::new();
         *hand += card;
         for player in 0..num_players {
@@ -276,7 +287,7 @@ fn size_of() {
     assert_eq!(mem::size_of::<ClientPhase<(), ()>>(), 128);
     assert_eq!(mem::size_of::<WarPhase<u8, ClientWarHand, ()>>(), 128);
     assert_eq!(mem::size_of::<WarTrick>(), 88);
-    assert_eq!(mem::size_of::<RummyPhase<ClientRummyHand, ()>>(), 72);
+    assert_eq!(mem::size_of::<RummyPhase<ClientRummyHand, ()>>(), 80);
 
     assert_eq!(mem::size_of::<ServerGame>(), 200);
     assert_eq!(mem::size_of::<ServerPhase>(), 144);
@@ -284,5 +295,7 @@ fn size_of() {
         mem::size_of::<WarPhase<Vec<Card>, ServerWarHand, ()>>(),
         144
     );
-    assert_eq!(mem::size_of::<RummyPhase<Cards, ()>>(), 72);
+    assert_eq!(mem::size_of::<RummyPhase<Cards, ()>>(), 80);
+    assert_eq!(mem::size_of::<ServerWarHand>(), 3);
+    assert_eq!(mem::size_of::<ClientWarHand>(), 3);
 }

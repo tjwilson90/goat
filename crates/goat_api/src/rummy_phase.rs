@@ -10,7 +10,7 @@ pub struct RummyPhase<Hand, History> {
     pub trick: RummyTrick,
     pub next: PlayerIdx,
     pub trump: Card,
-    pub pick_ups: u64,
+    pub pick_ups: u128,
     pub history: History,
 }
 
@@ -42,6 +42,9 @@ impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
             return Err(GoatError::CannotPlayRange { lo });
         }
         *hand -= Cards::range(lo, hi);
+        if hand.is_empty() {
+            self.pick_ups = 0;
+        }
         let killed = self.trick.play(lo, hi);
         if killed {
             self.history.kill(player, lo, hi);
@@ -102,13 +105,13 @@ impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
     }
 
     fn increment_pick_ups(&mut self, player: PlayerIdx) -> bool {
-        let pick_ups = (self.pick_ups >> (4 * player.0)) & 0xf;
-        if pick_ups < 10 {
-            self.pick_ups += 1 << (4 * player.0);
+        let pick_ups = (self.pick_ups >> (8 * player.0)) & 0xff;
+        if pick_ups < 64 {
+            self.pick_ups += 1 << (8 * player.0);
         }
-        if pick_ups == 9 {
+        if pick_ups == 63 {
             for i in 0..self.hands.len() {
-                if !self.hands[i].is_empty() && (self.pick_ups >> (4 * i)) & 0xf != 10 {
+                if !self.hands[i].is_empty() && (self.pick_ups >> (8 * i)) & 0xff != 64 {
                     return false;
                 }
             }
@@ -162,7 +165,7 @@ impl RummyPhase<Cards, ()> {
                 dreck: all_dreck,
             });
         } else {
-            let mut all_dreck: Vec<_> = all_dreck.into_iter().collect();
+            let mut all_dreck: Vec<_> = all_dreck.cards().collect();
             let mut rng = StdRng::seed_from_u64(seed ^ 1);
             dreck_players.shuffle(&mut rng);
             all_dreck.shuffle(&mut rng);

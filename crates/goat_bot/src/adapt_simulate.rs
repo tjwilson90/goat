@@ -4,14 +4,18 @@ use goat_api::{
 
 use crate::{strategy, Strategy};
 
-pub struct CoverSimple;
+pub struct AdaptSimulate;
 
-impl Strategy for CoverSimple {
+impl Strategy for AdaptSimulate {
     fn war(&self, idx: PlayerIdx, war: &WarPhase<ClientDeck, ClientWarHand, ()>) -> Option<Action> {
-        strategy::war_cover(idx, war)
+        if war.hands.len() < 4 {
+            strategy::war_duck(idx, war)
+        } else {
+            strategy::war_cover(idx, war)
+        }
     }
 
     fn rummy(&self, rummy: &RummyPhase<ClientRummyHand, Cards>) -> Action {
-        strategy::rummy_simple(rummy)
+        strategy::rummy_simulate(rummy)
     }
 }

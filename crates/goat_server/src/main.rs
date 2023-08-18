@@ -10,7 +10,7 @@ use warp::{sse, Filter, Rejection, Reply};
 
 pub use error::*;
 use goat_api::{Action, GameId, GoatError, UserId};
-use goat_bot::{AdaptSimple, Bot, CoverSimple, DuckSimple, PlayTopSimple, Strategy};
+use goat_bot::{AdaptSimulate, Bot, Strategy};
 pub use server::*;
 pub use subscriber::*;
 
@@ -129,12 +129,9 @@ fn run_bot<S: Strategy + Send + 'static>(state: &'static Server, name: String, s
         let rx = state.subscribe(user_id, name);
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
         let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {
-            Action::PlayCard { .. }
-            | Action::PlayTop
-            | Action::Slough { .. }
-            | Action::PlayRun { .. }
-            | Action::PickUp
-            | Action::Goat { .. } => Duration::from_secs(3),
+            Action::Slough { .. } | Action::Goat { .. } => Duration::from_millis(750),
+            Action::PlayCard { .. } | Action::PlayTop => Duration::from_millis(1500),
+            Action::PlayRun { .. } | Action::PickUp => Duration::from_secs(3),
             Action::Draw | Action::FinishTrick => Duration::from_millis(200),
             _ => Duration::ZERO,
         });
@@ -169,14 +166,14 @@ async fn main() {
         }
     });
 
-    run_bot(state, "Alice (bot)".to_string(), PlayTopSimple);
-    run_bot(state, "Bob (bot)".to_string(), AdaptSimple);
-    run_bot(state, "Carla (bot)".to_string(), CoverSimple);
-    run_bot(state, "Dimitri (bot)".to_string(), DuckSimple);
-    run_bot(state, "Eric (bot)".to_string(), PlayTopSimple);
-    run_bot(state, "Felicia (bot)".to_string(), AdaptSimple);
-    run_bot(state, "George (bot)".to_string(), CoverSimple);
-    run_bot(state, "Hannah (bot)".to_string(), DuckSimple);
+    run_bot(state, "Alice (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Bob (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Carla (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Dimitri (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Eric (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Felicia (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "George (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Hannah (bot)".to_string(), AdaptSimulate);
 
     let app = root()
         .or(assets())

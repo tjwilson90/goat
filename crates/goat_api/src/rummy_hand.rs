@@ -24,7 +24,7 @@ impl RummyHand for Cards {
     fn check_can_play(&self, lo: Card, hi: Card) -> Result<(), GoatError> {
         let cards = Cards::range(lo, hi);
         if !self.contains_all(cards) {
-            for card in cards {
+            for card in cards.cards() {
                 if !self.contains(card) {
                     return Err(GoatError::NotYourCard { card });
                 }
@@ -71,7 +71,7 @@ impl SubAssign<Cards> for ClientRummyHand {
         if self.known.contains_all(rhs) {
             self.known -= rhs;
         } else {
-            for card in rhs {
+            for card in rhs.cards() {
                 if self.known.contains(card) {
                     self.known -= card;
                 } else {

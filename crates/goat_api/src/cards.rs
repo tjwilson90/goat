@@ -22,7 +22,7 @@ impl Serialize for Cards {
         S: Serializer,
     {
         let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for card in *self {
+        for card in self.cards() {
             seq.serialize_element(&card)?;
         }
         seq.end()
@@ -149,12 +149,37 @@ impl Cards {
         self.bits -= removed;
         Cards { bits: removed }
     }
+
+    pub fn min_run(self) -> (Card, Card) {
+        let min = self.min();
+        (min, self.top_of_run(min))
+    }
+
+    pub fn top_of_run(self, card: Card) -> Card {
+        let mut bits = self.bits;
+        bits |= bits >> 1;
+        bits &= Self::ONE_DECK.bits;
+        bits |= bits << 1;
+        bits += Cards::from(card).bits;
+        bits >>= 2;
+        bits ^= bits >> 1;
+        bits &= Self::ONE_DECK.bits;
+        Cards { bits }.min()
+    }
+
+    pub fn cards(self) -> CardsIter {
+        CardsIter(self)
+    }
+
+    pub fn runs(self) -> RunsIter {
+        RunsIter(self)
+    }
 }
 
 impl Display for Cards {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("[")?;
-        let mut iter = self.into_iter();
+        let mut iter = self.cards();
         let card = match iter.next() {
             Some(card) => card,
             None => return f.write_str("]"),
@@ -204,6 +229,12 @@ impl From<Card> for Cards {
         Cards {
             bits: 1 << (2 * (card as u8)),
         }
+    }
+}
+
+impl From<(Card, Card)> for Cards {
+    fn from((lo, hi): (Card, Card)) -> Self {
+        Cards::range(lo, hi)
     }
 }
 
@@ -279,15 +310,6 @@ impl Mul<usize> for Cards {
     }
 }
 
-impl IntoIterator for Cards {
-    type Item = Card;
-    type IntoIter = CardsIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        CardsIter(self)
-    }
-}
-
 #[derive(Clone)]
 pub struct CardsIter(Cards);
 
@@ -323,6 +345,22 @@ impl DoubleEndedIterator for CardsIter {
 }
 
 impl ExactSizeIterator for CardsIter {}
+
+pub struct RunsIter(Cards);
+
+impl Iterator for RunsIter {
+    type Item = (Card, Card);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.0 == Cards::NONE {
+            None
+        } else {
+            let (lo, hi) = self.0.min_run();
+            self.0 -= Cards::range(lo, hi);
+            Some((lo, hi))
+        }
+    }
+}
 
 impl FromIterator<Card> for Cards {
     fn from_iter<T: IntoIterator<Item = Card>>(iter: T) -> Self {

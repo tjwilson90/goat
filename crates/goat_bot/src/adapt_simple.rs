@@ -1,5 +1,5 @@
 use goat_api::{
-    Action, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, RummyPhase, WarPhase,
+    Action, Cards, ClientDeck, ClientRummyHand, ClientWarHand, PlayerIdx, RummyPhase, WarPhase,
 };
 
 use crate::{strategy, Strategy};
@@ -15,7 +15,7 @@ impl Strategy for AdaptSimple {
         }
     }
 
-    fn rummy(&self, idx: PlayerIdx, rummy: &RummyPhase<ClientRummyHand, ()>) -> Action {
-        strategy::rummy_simple(idx, rummy)
+    fn rummy(&self, rummy: &RummyPhase<ClientRummyHand, Cards>) -> Action {
+        strategy::rummy_simple(rummy)
     }
 }

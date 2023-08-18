@@ -258,7 +258,7 @@ impl<'a> Serialize for WrapperContext<Cards, (Card, &'a RummyTrick)> {
         let (trump, trick) = self.1;
         let mut ser = ser.serialize_seq(Some(hand.len()))?;
         let mut run_min = Card::AceSpades;
-        for card in hand.into_iter().rev() {
+        for card in hand.cards().rev() {
             if card.rank() == Rank::Two || !hand.contains(card.with_rank(card.rank().next_down())) {
                 run_min = card;
             }
