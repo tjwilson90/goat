@@ -17,7 +17,7 @@ impl RandId {
         let mut buf = [0; 16];
         let mut val = self.0;
         for b in &mut buf {
-            *b = 48 + (val & 0x3f) as u8;
+            *b = encode((val & 0x3f) as u8);
             val >>= 6;
         }
         buf
@@ -67,11 +67,27 @@ impl<'de> Deserialize<'de> for RandId {
                 let mut val = 0;
                 v.bytes().for_each(|b| {
                     val <<= 6;
-                    val += (b - 48) as u128;
+                    val += decode(b - 48) as u128;
                 });
                 Ok(RandId(val))
             }
         }
         des.deserialize_str(Visitor)
+    }
+}
+
+fn encode(b: u8) -> u8 {
+    match b {
+        0..=11 => b + 46,
+        12..=37 => b + 53,
+        _ => b + 59,
+    }
+}
+
+fn decode(b: u8) -> u8 {
+    match b {
+        46..=57 => b - 46,
+        65..=90 => b - 53,
+        _ => b - 59,
     }
 }
