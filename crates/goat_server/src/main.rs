@@ -8,7 +8,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::{sse, Filter, Rejection, Reply};
 
 pub use error::*;
-use goat_api::{Action, GameId, GoatError, UserId};
+use goat_api::{Action, GameId, GoatError, RandId, UserId};
 use goat_bot::{AdaptSimulate, Bot, Strategy};
 pub use server::*;
 pub use subscriber::*;
@@ -23,8 +23,7 @@ mod test;
 fn user_id() -> impl Filter<Extract = (UserId,), Error = Rejection> + Clone {
     warp::cookie("USER_SECRET").map(|id: String| {
         let hash = Sha256::digest(id.as_bytes());
-        let hash = hash[..8].try_into().unwrap();
-        UserId(u64::from_le_bytes(hash))
+        UserId(RandId::from_hash(&hash))
     })
 }
 
@@ -125,8 +124,7 @@ fn subscribe(
 fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
         let hash = Sha256::digest(name.as_bytes());
-        let hash = hash[..8].try_into().unwrap();
-        let user_id = UserId(u64::from_le_bytes(hash));
+        let user_id = UserId(RandId::from_hash(&hash));
         let rx = state.subscribe(user_id, name);
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
         let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {

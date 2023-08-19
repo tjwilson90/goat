@@ -1,17 +1,16 @@
 use std::convert::{Infallible, TryFrom};
-use std::fmt::{Debug, Display, Write};
+use std::fmt::{Debug, Display, Write as _};
 use std::ops::Add;
 use std::str::FromStr;
 use std::{fmt, mem};
 
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{Cards, Rank, Suit};
 
 #[repr(u8)]
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
-#[serde(from = "String")]
-#[serde(into = "String")]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Card {
     TwoClubs = 0,
     ThreeClubs,
@@ -137,5 +136,39 @@ impl Add<Card> for Card {
 
     fn add(self, rhs: Card) -> Self::Output {
         Cards::from(self) + rhs
+    }
+}
+
+impl Serialize for Card {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes = [self.rank().char() as u8, self.suit().char() as u8];
+        ser.serialize_str(std::str::from_utf8(&bytes).unwrap())
+    }
+}
+
+impl<'de> Deserialize<'de> for Card {
+    fn deserialize<D>(des: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct Visitor;
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Card;
+
+            fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                fmt.write_str("a card")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                Ok(Card::from_str(v).unwrap())
+            }
+        }
+        des.deserialize_str(Visitor)
     }
 }

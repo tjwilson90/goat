@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
-use std::str::FromStr;
 
+use crate::RandId;
 use serde::{Deserialize, Serialize};
 
 macro_rules! declare_id {
@@ -30,8 +30,8 @@ macro_rules! declare_id {
     };
 }
 
-declare_id!(GameId, u64);
-declare_id!(UserId, u64);
+declare_id!(GameId, RandId);
+declare_id!(UserId, RandId);
 declare_id!(PlayerIdx, u8);
 
 impl PlayerIdx {
@@ -39,19 +39,19 @@ impl PlayerIdx {
         self.0 as usize
     }
 }
-
-impl FromStr for GameId {
-    type Err = <u64 as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse()?))
-    }
-}
-
-impl FromStr for UserId {
-    type Err = <u64 as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse()?))
-    }
-}
+//
+// impl FromStr for GameId {
+//     type Err = <u64 as FromStr>::Err;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         Ok(Self(s.parse()?))
+//     }
+// }
+//
+// impl FromStr for UserId {
+//     type Err = <u64 as FromStr>::Err;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         Ok(Self(s.parse()?))
+//     }
+// }
