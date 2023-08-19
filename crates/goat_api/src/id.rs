@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 macro_rules! declare_id {
     ($name:ident, $inner:ty) => {
@@ -31,8 +30,8 @@ macro_rules! declare_id {
     };
 }
 
-declare_id!(GameId, Uuid);
-declare_id!(UserId, Uuid);
+declare_id!(GameId, u128);
+declare_id!(UserId, u128);
 declare_id!(PlayerIdx, u8);
 
 impl PlayerIdx {
@@ -42,7 +41,7 @@ impl PlayerIdx {
 }
 
 impl FromStr for GameId {
-    type Err = <Uuid as FromStr>::Err;
+    type Err = <u128 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.parse()?))
@@ -50,7 +49,7 @@ impl FromStr for GameId {
 }
 
 impl FromStr for UserId {
-    type Err = <Uuid as FromStr>::Err;
+    type Err = <u128 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.parse()?))

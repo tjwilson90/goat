@@ -5,7 +5,6 @@ use std::time::Duration;
 use log::LevelFilter;
 use rand::RngCore;
 use tokio::time::timeout;
-use uuid::Uuid;
 
 use goat_api::{
     Action, Card, Client, ClientGame, ClientPhase, Event, GoatError, Response, User, UserId,
@@ -15,7 +14,7 @@ use goat_bot::{Bot, CoverSimple, DuckSimple, PlayTopSimple, Strategy};
 use crate::Server;
 
 fn run_bot<S: Strategy>(state: Arc<Server>, name: String, strategy: S) -> UserId {
-    let user_id = UserId(Uuid::new_v4());
+    let user_id = UserId(rand::random());
     let rx = state.subscribe(user_id, name);
     tokio::spawn(async move {
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
@@ -82,7 +81,7 @@ macro_rules! pick_up {
 #[tokio::test]
 async fn test_play_top_deterministic() -> Result<(), GoatError> {
     let server = Arc::new(Server::default());
-    let watcher = UserId(Uuid::new_v4());
+    let watcher = UserId(rand::random());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
     expect!(
         rx,
@@ -261,7 +260,7 @@ async fn test_bots() -> Result<(), GoatError> {
         .is_test(true)
         .try_init();
     let server = Arc::new(Server::default());
-    let watcher = UserId(Uuid::new_v4());
+    let watcher = UserId(rand::random());
     let mut rx = server.subscribe(watcher, "watcher".to_string());
     let mut client: Client<(), (), ()> = Client::new(());
     let cover = run_bot(server.clone(), "cover".to_string(), CoverSimple);

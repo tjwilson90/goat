@@ -6,7 +6,6 @@ use parking_lot::{Mutex, RwLock};
 use smallvec::SmallVec;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedReceiver;
-use uuid::Uuid;
 
 use goat_api::{Action, Event, GameId, GoatError, Response, ServerGame, ServerPhase, User, UserId};
 
@@ -33,7 +32,7 @@ impl Default for Server {
 
 impl Server {
     pub fn new_game(&self, seed: u64) -> GameId {
-        let game_id = GameId(Uuid::new_v4());
+        let game_id = GameId(rand::random());
         let mut games = self.games.write();
         games.insert(
             game_id,

@@ -1,7 +1,6 @@
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use parking_lot::Mutex;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -30,13 +29,13 @@ impl Subscriber {
         if let Some(replayed) = &mut self.replayed {
             match &response {
                 Response::Game { game_id, .. } => {
-                    let replayed = replayed.lock();
+                    let replayed = replayed.lock().unwrap();
                     if !replayed.contains(game_id) {
                         return true;
                     }
                 }
                 Response::Replay { game_id, .. } => {
-                    let mut replayed = replayed.lock();
+                    let mut replayed = replayed.lock().unwrap();
                     replayed.insert(*game_id);
                 }
                 _ => {}

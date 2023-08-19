@@ -5,7 +5,6 @@ use sha2::{Digest, Sha256};
 use tokio::time;
 use tokio::time::Duration;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use uuid::Uuid;
 use warp::{sse, Filter, Rejection, Reply};
 
 pub use error::*;
@@ -24,7 +23,8 @@ mod test;
 fn user_id() -> impl Filter<Extract = (UserId,), Error = Rejection> + Clone {
     warp::cookie("USER_SECRET").map(|id: String| {
         let hash = Sha256::digest(id.as_bytes());
-        UserId(Uuid::from_slice(&hash[..16]).unwrap())
+        let hash = hash[..16].try_into().unwrap();
+        UserId(u128::from_le_bytes(hash))
     })
 }
 
@@ -125,7 +125,8 @@ fn subscribe(
 fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
         let hash = Sha256::digest(name.as_bytes());
-        let user_id = UserId(Uuid::from_slice(&hash[16..]).unwrap());
+        let hash = hash[..16].try_into().unwrap();
+        let user_id = UserId(u128::from_le_bytes(hash));
         let rx = state.subscribe(user_id, name);
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
         let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {
