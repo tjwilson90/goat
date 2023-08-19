@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for RandId {
                 let mut val = 0;
                 v.bytes().for_each(|b| {
                     val <<= 6;
-                    val += decode(b - 48) as u128;
+                    val += decode(b) as u128;
                 });
                 Ok(RandId(val))
             }
