@@ -577,7 +577,12 @@ function rummyCardElement(gameId, card) {
             pretty(card.card),
             createElement("input", {
                 type: "checkbox",
-                listeners: {click: (event) => playRunMany(gameId)}
+                listeners: {click: (event) => {
+                    playRunMany(gameId);
+                    const game = client.game(gameId);
+                    const index = game.players.indexOf(window.userId);
+                    updateRummyCards(gameId, game, index);
+                }}
             })
         ]
     });
@@ -752,7 +757,6 @@ export function playRunMany(gameId) {
     if (checkedElems.length >= 2) {
         const lo = checkedElems[0].parentElement.dataset.card;
         const hi = checkedElems[1].parentElement.dataset.card;
-        disableButtons(gameId);
         applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
     }
 }
