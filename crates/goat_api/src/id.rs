@@ -30,8 +30,8 @@ macro_rules! declare_id {
     };
 }
 
-declare_id!(GameId, u128);
-declare_id!(UserId, u128);
+declare_id!(GameId, u64);
+declare_id!(UserId, u64);
 declare_id!(PlayerIdx, u8);
 
 impl PlayerIdx {
@@ -41,7 +41,7 @@ impl PlayerIdx {
 }
 
 impl FromStr for GameId {
-    type Err = <u128 as FromStr>::Err;
+    type Err = <u64 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.parse()?))
@@ -49,7 +49,7 @@ impl FromStr for GameId {
 }
 
 impl FromStr for UserId {
-    type Err = <u128 as FromStr>::Err;
+    type Err = <u64 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.parse()?))
