@@ -12,6 +12,16 @@ impl RandId {
         let hash = hash[..16].try_into().unwrap();
         Self(u128::from_le_bytes(hash) & 0xffff_ffff_ffff_ffff_ffff_ffff)
     }
+
+    fn to_bytes(self) -> [u8; 16] {
+        let mut buf = [0; 16];
+        let mut val = self.0;
+        for b in &mut buf {
+            *b = 48 + (val & 0x3f) as u8;
+            val >>= 6;
+        }
+        buf
+    }
 }
 
 impl Distribution<RandId> for Standard {
@@ -22,7 +32,8 @@ impl Distribution<RandId> for Standard {
 
 impl Display for RandId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
+        let buf = self.to_bytes();
+        f.write_str(std::str::from_utf8(&buf).unwrap())
     }
 }
 
@@ -31,12 +42,7 @@ impl Serialize for RandId {
     where
         S: Serializer,
     {
-        let mut buf = [0u8; 16];
-        let mut val = self.0;
-        for b in &mut buf {
-            *b = 48 + (val & 0x3f) as u8;
-            val >>= 6;
-        }
+        let buf = self.to_bytes();
         ser.serialize_str(std::str::from_utf8(&buf).unwrap())
     }
 }
