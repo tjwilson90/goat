@@ -312,7 +312,6 @@ name = "goat_bot"
 version = "0.0.0"
 dependencies = [
  "async-trait",
- "getrandom",
  "goat_api",
  "log",
  "rand",
@@ -345,6 +344,7 @@ name = "goat_wasm"
 version = "0.0.0"
 dependencies = [
  "console_error_panic_hook",
+ "getrandom",
  "goat_api",
  "js-sys",
  "serde",
