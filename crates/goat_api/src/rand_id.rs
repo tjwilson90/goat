@@ -1,8 +1,10 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::convert::Infallible;
 use std::fmt;
 use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RandId(u128);
@@ -13,13 +15,13 @@ impl RandId {
         Self(u128::from_le_bytes(hash) & 0xffff_ffff_ffff_ffff_ffff_ffff)
     }
 
-    fn to_bytes(self) -> [u8; 16] {
+    fn as_bytes(&self) -> [u8; 16] {
         let mut buf = [0; 16];
         let mut val = self.0;
-        for b in &mut buf {
+        buf.iter_mut().rev().for_each(|b| {
             *b = encode((val & 0x3f) as u8);
             val >>= 6;
-        }
+        });
         buf
     }
 }
@@ -32,8 +34,21 @@ impl Distribution<RandId> for Standard {
 
 impl Display for RandId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let buf = self.to_bytes();
+        let buf = self.as_bytes();
         f.write_str(std::str::from_utf8(&buf).unwrap())
+    }
+}
+
+impl FromStr for RandId {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut val = 0;
+        s.bytes().for_each(|b| {
+            val <<= 6;
+            val += decode(b) as u128;
+        });
+        Ok(RandId(val))
     }
 }
 
@@ -42,7 +57,7 @@ impl Serialize for RandId {
     where
         S: Serializer,
     {
-        let buf = self.to_bytes();
+        let buf = self.as_bytes();
         ser.serialize_str(std::str::from_utf8(&buf).unwrap())
     }
 }
@@ -64,12 +79,7 @@ impl<'de> Deserialize<'de> for RandId {
             where
                 E: serde::de::Error,
             {
-                let mut val = 0;
-                v.bytes().for_each(|b| {
-                    val <<= 6;
-                    val += decode(b) as u128;
-                });
-                Ok(RandId(val))
+                Ok(v.parse().unwrap())
             }
         }
         des.deserialize_str(Visitor)
@@ -89,5 +99,26 @@ fn decode(b: u8) -> u8 {
         46..=57 => b - 46,
         65..=90 => b - 53,
         _ => b - 59,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::rand_id::{decode, encode};
+    use crate::RandId;
+
+    #[test]
+    fn encode_decode() {
+        for b in 0..64 {
+            assert_eq!(b, decode(encode(b)));
+        }
+    }
+
+    #[test]
+    fn serde() {
+        for _ in 0..1000 {
+            let id: RandId = rand::random();
+            assert_eq!(id, id.to_string().parse().unwrap());
+        }
     }
 }
