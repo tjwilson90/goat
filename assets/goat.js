@@ -531,24 +531,25 @@ function updateRummyCards(gameId, game, index) {
     const pickUpElem = gameElem.querySelector(".pick-up");
     const playRangeElem = gameElem.querySelector(".play-range");
     if (game.phase.next != index) {
+        pickUpElem.disabled = true;
+        playRangeElem.disabled = true;
         for (const checkElem of gameElem.querySelectorAll(".rummy-card input")) {
             checkElem.disabled = true;
             checkElem.checked = false;
         }
-        pickUpElem.disabled = true;
-        playRangeElem.disabled = true;
         return;
     }
 
     pickUpElem.disabled = game.phase.trick.plays.length == 0;
     const checkedElems = gameElem.querySelectorAll(".rummy-card input:checked");
     if (checkedElems.length == 0) {
+        playRangeElem.disabled = true;
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
             checkElem.disabled = !cardElem.classList.contains("canPlay");
         }
-        playRangeElem.disabled = true;
     } else if (checkedElems.length == 1) {
+        playRangeElem.disabled = false;
         const checkedCardElem = checkedElems[0].parentElement;
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
@@ -558,14 +559,13 @@ function updateRummyCards(gameId, game, index) {
                 checkElem.disabled = cardElem.dataset.runmin != checkedCardElem.dataset.runmin;
             }
         }
-        playRangeElem.disabled = false;
     } else {
+        playRangeElem.disabled = true;
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
             checkElem.checked = false;
             checkElem.disabled = !cardElem.classList.contains("canPlay");
         }
-        playRangeElem.disabled = true;
     }
 }
 
@@ -577,12 +577,7 @@ function rummyCardElement(gameId, card) {
             pretty(card.card),
             createElement("input", {
                 type: "checkbox",
-                listeners: {click: (event) => {
-                    playRunMany(gameId);
-                    const game = client.game(gameId);
-                    const index = game.players.indexOf(window.userId);
-                    updateRummyCards(gameId, game, index);
-                }}
+                listeners: {click: (event) => playRunMany(gameId)}
             })
         ]
     });
@@ -748,6 +743,7 @@ export function finishTrick(gameId) {
 export function playRunOne(gameId) {
     const checkedElems = document.querySelectorAll(`[data-gameId="${gameId}"] .rummy-card input:checked`)
     const card = checkedElems[0].parentElement.dataset.card;
+    disableButtons(gameId);
     applyAction(gameId, `{"type":"playRun","lo":"${card}","hi":"${card}"}`);
 }
 
@@ -756,12 +752,24 @@ export function playRunMany(gameId) {
     if (checkedElems.length >= 2) {
         const lo = checkedElems[0].parentElement.dataset.card;
         const hi = checkedElems[1].parentElement.dataset.card;
+        disableButtons(gameId);
         applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
     }
 }
 
 export function pickUp(gameId) {
+    disableButtons(gameId);
     applyAction(gameId, `{"type":"pickUp"}`);
+}
+
+function disableButtons(gameId) {
+    let gameElem = document.querySelector(`[data-gameId="${gameId}"]`);
+    gameElem.querySelector(".pick-up").disabled = true;
+    gameElem.querySelector(".play-range").disabled = true;
+    for (const checkElem of gameElem.querySelectorAll(".rummy-card input")) {
+        checkElem.disabled = true;
+        checkElem.checked = false;
+    }
 }
 
 function applyAction(gameId, action) {
