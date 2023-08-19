@@ -146,11 +146,6 @@ async fn main() {
     env_logger::init();
     let state: &Server = &*Box::leak(Box::default());
 
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(8)
-        .build_global()
-        .unwrap();
-
     tokio::spawn(async move {
         let mut ticker = time::interval(Duration::from_secs(20));
         loop {

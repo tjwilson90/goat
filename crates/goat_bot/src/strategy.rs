@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use goat_api::{
     Action, Cards, ClientDeck, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, Deck,
     Event, PlayerIdx, Rank, RummyHand, Suit, WarHand,
@@ -10,9 +11,10 @@ use std::time::{Duration, Instant};
 type WarPhase = goat_api::WarPhase<ClientDeck, ClientWarHand, ()>;
 type RummyPhase = goat_api::RummyPhase<ClientRummyHand, Cards>;
 
+#[async_trait]
 pub trait Strategy: Send + Sync + 'static {
     fn war(&self, idx: PlayerIdx, war: &WarPhase) -> Option<Action>;
-    fn rummy(&self, rummy: &RummyPhase) -> Action;
+    async fn rummy(&self, rummy: &RummyPhase) -> Action;
 }
 
 /// The simplest possible war strategy, never hold any cards in hand and always play from the top
@@ -250,7 +252,7 @@ pub fn rummy_random(rummy: &RummyPhase) -> Action {
     Action::PickUp
 }
 
-pub fn rummy_simulate(rummy: &RummyPhase) -> Action {
+pub async fn rummy_simulate(rummy: &RummyPhase) -> Action {
     let mut unknown = Cards::ONE_DECK * 3;
     let mut count = 1 + rummy.history.len();
     unknown -= rummy.trump;
@@ -274,6 +276,9 @@ pub fn rummy_simulate(rummy: &RummyPhase) -> Action {
         let (losses, games) = simulations.entry(action).or_insert((0, 0));
         *losses += (goat == rummy.next) as u64;
         *games += 1;
+        if *games & 0xfff == 0 {
+            tokio::task::yield_now().await;
+        }
     }
     log::debug!("Simulations on {:?} produced {:?}", rummy, simulations);
     simulations

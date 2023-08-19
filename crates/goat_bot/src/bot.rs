@@ -88,13 +88,7 @@ impl<
             ClientPhase::War(war) => self.strategy.war(idx, war),
             ClientPhase::Rummy(rummy) => {
                 if rummy.next == idx {
-                    let (tx, rx) = tokio::sync::oneshot::channel();
-                    rayon::scope(|scope| {
-                        scope.spawn(|_| {
-                            tx.send(self.strategy.rummy(rummy)).unwrap();
-                        });
-                    });
-                    Some(rx.await.unwrap())
+                    Some(self.strategy.rummy(rummy).await)
                 } else {
                     None
                 }
