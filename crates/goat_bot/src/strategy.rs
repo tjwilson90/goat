@@ -196,7 +196,7 @@ pub fn rummy_simple(rummy: &RummyPhase) -> Action {
     }
 }
 
-pub fn rummy_random(rummy: &RummyPhase) -> Action {
+pub fn rummy_random<R: Rng>(rng: &mut R, rummy: &RummyPhase) -> Action {
     let hand = rummy.hands[rummy.next.idx()].known;
     let trump = rummy.trump.suit();
     let trumps = hand.in_suit(trump);
@@ -238,7 +238,7 @@ pub fn rummy_random(rummy: &RummyPhase) -> Action {
         let could_play_whole_run = lo != hi && (has_excessive_trump || lo.suit() != trump);
         num_choices += 1 + could_play_whole_run as usize;
     }
-    let mut choice = rand::thread_rng().gen_range(0..num_choices);
+    let mut choice = rng.gen_range(0..num_choices);
     for (lo, hi) in plays.runs() {
         let could_play_whole_run = lo != hi && (has_excessive_trump || lo.suit() != trump);
         if choice == 0 {
@@ -272,7 +272,7 @@ pub async fn rummy_simulate(rummy: &RummyPhase) -> Action {
     let start = Instant::now();
     let mut simulations = HashMap::new();
     while start.elapsed() < Duration::from_secs(3) {
-        let (action, goat) = simulate_once(rummy.clone(), unknown);
+        let (action, goat) = simulate_once(&mut rand::thread_rng(), rummy.clone(), unknown);
         let (losses, games) = simulations.entry(action).or_insert((0, 0));
         *losses += (goat == rummy.next) as u64;
         *games += 1;
@@ -294,10 +294,14 @@ pub async fn rummy_simulate(rummy: &RummyPhase) -> Action {
         .unwrap()
 }
 
-fn simulate_once(mut rummy: RummyPhase, unknown: Cards) -> (Action, PlayerIdx) {
+pub fn simulate_once<R: Rng>(
+    rng: &mut R,
+    mut rummy: RummyPhase,
+    unknown: Cards,
+) -> (Action, PlayerIdx) {
     if !unknown.is_empty() {
         let mut unknown: Vec<_> = unknown.cards().collect();
-        unknown.shuffle(&mut rand::thread_rng());
+        unknown.shuffle(rng);
         let mut unknown = unknown.into_iter();
         for hand in rummy.hands.iter_mut() {
             for _ in 0..hand.unknown {
@@ -313,7 +317,7 @@ fn simulate_once(mut rummy: RummyPhase, unknown: Cards) -> (Action, PlayerIdx) {
     let mut first_action = None;
     loop {
         let action = match &game.phase {
-            ClientPhase::Rummy(rummy) => rummy_random(rummy),
+            ClientPhase::Rummy(rummy) => rummy_random(rng, rummy),
             ClientPhase::Goat(goat) => return (first_action.unwrap(), goat.goat),
             _ => panic!("unexpected phase"),
         };
