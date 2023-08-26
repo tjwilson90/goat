@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use goat_api::{
     Card, Cards, ClientGame, ClientRummyHand, Event, PlayerIdx, RummyPhase, RummyTrick, Suit,
     UserId,
@@ -9,61 +9,105 @@ use std::str::FromStr;
 
 fn cards_benchmark(c: &mut Criterion) {
     c.bench_function("Cards::range", |b| {
-        b.iter(|| Cards::range(black_box(Card::TwoHearts), black_box(Card::AceHearts)))
+        b.iter_batched(
+            || (Card::TwoHearts, Card::AceHearts),
+            |(lo, hi)| Cards::range(lo, hi),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::len", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::len(black_box(cards)))
+        b.iter_batched(
+            || Cards::from_str("J872H 76C").unwrap(),
+            |cards| cards.len(),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::max", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::max(black_box(cards)))
+        b.iter_batched(
+            || Cards::from_str("J872H 76C").unwrap(),
+            |cards| cards.max(),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::min", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::min(black_box(cards)))
+        b.iter_batched(
+            || Cards::from_str("J872H 76C").unwrap(),
+            |cards| cards.min(),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::in_suit", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::in_suit(black_box(cards), black_box(Suit::Hearts)))
+        b.iter_batched(
+            || (Cards::from_str("J872H 76C").unwrap(), Suit::Hearts),
+            |(cards, suit)| cards.in_suit(suit),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::above", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::above(black_box(cards), black_box(Card::SevenHearts)))
+        b.iter_batched(
+            || (Cards::from_str("J872H 76C").unwrap(), Card::SevenHearts),
+            |(cards, card)| cards.above(card),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::below", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::below(black_box(cards), black_box(Card::TenHearts)))
+        b.iter_batched(
+            || (Cards::from_str("J872H 76C").unwrap(), Card::TenHearts),
+            |(cards, card)| cards.below(card),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::contains", |b| {
-        let cards = Cards::from_str("J872H 76C").unwrap();
-        b.iter(|| Cards::contains(black_box(cards), black_box(Card::TwoDiamonds)))
+        b.iter_batched(
+            || (Cards::from_str("J872H 76C").unwrap(), Card::TwoDiamonds),
+            |(cards, card)| cards.contains(card),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::contains_all", |b| {
-        let cards1 = Cards::from_str("J872H 76C").unwrap();
-        let cards2 = Cards::from_str("J82H 6C").unwrap();
-        b.iter(|| Cards::contains_all(black_box(cards1), black_box(cards2)))
+        b.iter_batched(
+            || {
+                (
+                    Cards::from_str("J872H 76C").unwrap(),
+                    Cards::from_str("J82H 6C").unwrap(),
+                )
+            },
+            |(c1, c2)| c1.contains_all(c2),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::remove_all", |b| {
-        let cards1 = Cards::from_str("J872H 76C").unwrap();
-        let cards2 = Cards::from_str("J82H 3D 6C").unwrap();
         b.iter_batched(
-            || cards1.clone(),
-            |mut cards| Cards::remove_all(black_box(&mut cards), black_box(cards2)),
+            || {
+                (
+                    Cards::from_str("J872H 76C").unwrap(),
+                    Cards::from_str("J82H 3D 6C").unwrap(),
+                )
+            },
+            |(mut c1, c2)| c1.remove_all(c2),
             BatchSize::SmallInput,
         )
     });
     c.bench_function("Cards::top_of_run", |b| {
-        let cards = Cards::from_str("J8762H 76C").unwrap();
-        b.iter(|| Cards::top_of_run(black_box(cards), black_box(Card::SixHearts)))
+        b.iter_batched(
+            || (Cards::from_str("J8762H 76C").unwrap(), Card::SixHearts),
+            |(cards, card)| cards.top_of_run(card),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::cards count", |b| {
-        let cards = Cards::from_str("J8762H 76C").unwrap();
-        b.iter(|| Cards::cards(black_box(cards)).count())
+        b.iter_batched(
+            || Cards::from_str("J8762H 76C").unwrap(),
+            |cards| cards.cards().count(),
+            BatchSize::SmallInput,
+        )
     });
     c.bench_function("Cards::runs count", |b| {
-        let cards = Cards::from_str("J8762H 76C").unwrap();
-        b.iter(|| Cards::runs(black_box(cards)).count())
+        b.iter_batched(
+            || Cards::from_str("J8762H 76C").unwrap(),
+            |cards| cards.runs().count(),
+            BatchSize::SmallInput,
+        )
     });
 }
 
