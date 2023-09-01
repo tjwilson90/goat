@@ -1,0 +1,27 @@
+{
+  "name": "goat-ui",
+  "version": "0.1.0",
+  "description": "React and PIXI.js based frontend for the card game Goat.",
+  "main": "index.ts",
+  "repository": "https://github.com/tjwilson90/goat",
+  "author": "Tres Brenan <michael@brenan.dev>",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc --noEmit && node esbuild.config.mjs build",
+    "serve": "tsc --noEmit && node esbuild.config.mjs watch"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "esbuild": "^0.19.2",
+    "esbuild-plugin-copy": "^2.1.1",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@pixi/utils": "^7.2.4",
+    "pixi.js": "^7.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tweenjs": "^1.0.2"
+  }
+}
