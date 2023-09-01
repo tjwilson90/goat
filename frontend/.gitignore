@@ -1,4 +1,6 @@
 node_modules/
 build/
+static/goat_wasm_bg.wasm
+src/generated/
 
 tsconfig.tsbuildinfo

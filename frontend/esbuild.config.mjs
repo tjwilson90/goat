@@ -17,7 +17,7 @@ const context = await esbuild.context({
     copy({
       assets: {
         from: ['./static/*'],
-        to: ['./']
+        to: ['./'] // Implicitly adds 'build' to all paths.
       },
       watch: mode == "watch"
     })
