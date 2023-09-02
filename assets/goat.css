@@ -66,7 +66,7 @@ span[data-suit] {
     height: 115px;
     padding: 0 5px 0 5px;
 }
-input {
+.card-select {
     height: 20px;
     width: 20px;
 }

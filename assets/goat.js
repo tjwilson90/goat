@@ -577,6 +577,7 @@ function rummyCardElement(gameId, card) {
             pretty(card.card),
             createElement("input", {
                 type: "checkbox",
+                classList: ["card-select"],
                 listeners: {click: (event) => {
                     playRunMany(gameId);
                     const game = client.game(gameId);

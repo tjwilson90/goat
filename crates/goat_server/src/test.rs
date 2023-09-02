@@ -151,105 +151,78 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
             event: Event::Start { num_decks: 1 },
         }
     );
-    top!(rx, game_id, 3C, KC, 6D);
-    top!(rx, game_id, 5S, 7H, 4S);
-    top!(rx, game_id, 6S, 4C, 3S);
-    top!(rx, game_id, 5H, 2C, 8D);
-    top!(rx, game_id, QH, TS, 6C);
-    top!(rx, game_id, 7S, QS, QD, KD, KH, 8S, TC);
-    top!(rx, game_id, 2D, 9D, 8C);
-    top!(rx, game_id, 4H, 7D, KS);
-    top!(rx, game_id, QC, 4D, 9S);
-    top!(rx, game_id, AH, 8H, 2S);
-    top!(rx, game_id, 5D, 9C, JD);
-    top!(rx, game_id, JC, TH, 3D);
-    top!(rx, game_id, AD, 7C, AS, 9H, 5C);
-    top!(rx, game_id, JH, 3H, 6H);
-    top!(rx, game_id, TD, AC, 2H);
+    top!(rx, game_id, KS, 3S, TH);
+    top!(rx, game_id, JC, 9D, QC);
+    top!(rx, game_id, TC, QS, KC);
+    top!(rx, game_id, JD, AS, 8H);
+    top!(rx, game_id, 4D, 6C, TS);
+    top!(rx, game_id, 9C, 4C, 4H);
+    top!(rx, game_id, 3H, 3D, 8C);
+    top!(rx, game_id, 6S, AH, 7H);
+    top!(rx, game_id, 8S, QD, 9H);
+    top!(rx, game_id, 3C, 4S, QH);
+    top!(rx, game_id, 7C, 2D, 8D);
+    top!(rx, game_id, AC, JH, 7S);
+    top!(rx, game_id, 5H, 5S, 6D);
+    top!(rx, game_id, KH, 2H, 9S);
+    top!(rx, game_id, 2C, 7D, JS);
+    top!(rx, game_id, 5D, KD, TD);
+    top!(rx, game_id, 6H, 2S, AD);
     expect!(
         rx,
         Response::Game {
             game_id,
             event: Event::RevealTrump {
-                trump: Card::JackSpades
+                trump: Card::FiveClubs
             },
         }
     );
-    run!(rx, game_id, 2H, 2H);
-    run!(rx, game_id, 5H, 5H);
-    run!(rx, game_id, 6H, 7H);
-
-    run!(rx, game_id, 3D, 3D);
-    run!(rx, game_id, 4D, 4D);
-    run!(rx, game_id, 6D, 6D);
-
-    run!(rx, game_id, 2C, 3C);
-    run!(rx, game_id, 4C, 5C);
-    run!(rx, game_id, TC, TC);
-
-    run!(rx, game_id, 4H, 4H);
-    run!(rx, game_id, QH, QH);
-    run!(rx, game_id, 3S, 3S);
-
-    run!(rx, game_id, 5D, 5D);
-    run!(rx, game_id, 7D, 7D);
-    run!(rx, game_id, 8D, 9D);
-
-    run!(rx, game_id, 6C, 6C);
-    run!(rx, game_id, 7C, 7C);
-    run!(rx, game_id, QC, QC);
-
-    run!(rx, game_id, TD, TD);
-    run!(rx, game_id, TS, TS);
-    run!(rx, game_id, AS, AS);
-
-    run!(rx, game_id, 3H, 3H);
-    run!(rx, game_id, 8H, 8H);
-    pick_up!(rx, game_id);
-    run!(rx, game_id, 9H, JH);
-    run!(rx, game_id, KH, AH);
-
-    run!(rx, game_id, QD, KD);
-    pick_up!(rx, game_id);
-
-    run!(rx, game_id, JD, JD);
     run!(rx, game_id, 2S, 2S);
-    pick_up!(rx, game_id);
-    run!(rx, game_id, 4S, 4S);
+    run!(rx, game_id, 5S, 5S);
     run!(rx, game_id, 7S, 7S);
 
-    run!(rx, game_id, AC, AC);
-    pick_up!(rx, game_id);
+    run!(rx, game_id, 3S, 3S);
+    run!(rx, game_id, 4S, 4S);
+    run!(rx, game_id, 8S, 9S);
 
+    run!(rx, game_id, 2H, 2H);
+    run!(rx, game_id, 3H, 3H);
+    run!(rx, game_id, 4H, 4H);
+
+    run!(rx, game_id, 6H, 7H);
+    run!(rx, game_id, 8H, 9H);
+    run!(rx, game_id, TH, JH);
+
+    run!(rx, game_id, 2D, 3D);
+    run!(rx, game_id, 4D, 4D);
+    run!(rx, game_id, 5D, 6D);
+
+    run!(rx, game_id, 5H, 5H);
+    run!(rx, game_id, 7C, 7C);
     run!(rx, game_id, 9C, 9C);
-    run!(rx, game_id, 8S, 8S);
-    pick_up!(rx, game_id);
-    pick_up!(rx, game_id);
-
-    run!(rx, game_id, 9S, 9S);
-    pick_up!(rx, game_id);
-
-    run!(rx, game_id, JC, JC);
-    run!(rx, game_id, QS, QS);
-    pick_up!(rx, game_id);
-    pick_up!(rx, game_id);
-
-    run!(rx, game_id, KS, KS);
-    pick_up!(rx, game_id);
-
-    run!(rx, game_id, AD, AD);
-    run!(rx, game_id, 9S, 9S);
-
-    run!(rx, game_id, 8C, 9C);
-    run!(rx, game_id, 5S, 5S);
 
     run!(rx, game_id, 6S, 6S);
+    run!(rx, game_id, AS, AS);
+    run!(rx, game_id, 8C, 8C);
+
     run!(rx, game_id, KS, KS);
+    run!(rx, game_id, 2C, 2C);
+    run!(rx, game_id, JC, JC);
 
-    run!(rx, game_id, 2D, 2D);
-    run!(rx, game_id, 8S, 8S);
+    run!(rx, game_id, KH, KH);
+    run!(rx, game_id, AC, AC);
+    pick_up!(rx, game_id);
+    pick_up!(rx, game_id);
 
-    run!(rx, game_id, QS, QS);
+    run!(rx, game_id, 8D, 8D);
+    run!(rx, game_id, AD, AD);
+    run!(rx, game_id, QC, QC);
+
+    run!(rx, game_id, 9D, KD);
+    run!(rx, game_id, 3C, 3C);
+
+    run!(rx, game_id, TS, QS);
+    run!(rx, game_id, AC, AC);
     Ok(())
 }
 
