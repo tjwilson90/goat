@@ -320,27 +320,32 @@ impl Iterator for CardsIter {
         if self.0 == Cards::NONE {
             None
         } else {
-            let card = self.0.max();
+            let card = self.0.min();
             self.0 -= card;
             Some(card)
         }
+    }
+
+    fn fold<B, F>(self, mut init: B, mut f: F) -> B
+    where
+        Self: Sized,
+        F: FnMut(B, Self::Item) -> B,
+    {
+        let mut bits = self.0.bits;
+        while bits != 0 {
+            let tz = bits.trailing_zeros();
+            init = f(init, Card::from(tz as u8 / 2));
+            if tz & 1 == 1 {
+                init = f(init, Card::from(tz as u8 / 2));
+            }
+            bits ^= 1 << tz;
+        }
+        init
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = self.0.len();
         (size, Some(size))
-    }
-}
-
-impl DoubleEndedIterator for CardsIter {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.0 == Cards::NONE {
-            None
-        } else {
-            let card = self.0.min();
-            self.0 -= card;
-            Some(card)
-        }
     }
 }
 
