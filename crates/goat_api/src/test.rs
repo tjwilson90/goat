@@ -72,10 +72,10 @@ fn cards_iter() {
             .cards()
             .collect::<Vec<_>>(),
         vec![
-            Card::QueenSpades,
-            Card::AceHearts,
+            Card::TenClubs,
             Card::JackDiamonds,
-            Card::TenClubs
+            Card::AceHearts,
+            Card::QueenSpades
         ]
     );
 }

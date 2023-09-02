@@ -179,7 +179,7 @@ impl Cards {
 impl Display for Cards {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("[")?;
-        let mut iter = self.cards();
+        let mut iter = self.cards().rev();
         let card = match iter.next() {
             Some(card) => card,
             None => return f.write_str("]"),
@@ -326,6 +326,11 @@ impl Iterator for CardsIter {
         }
     }
 
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.0.len();
+        (size, Some(size))
+    }
+
     fn fold<B, F>(self, mut init: B, mut f: F) -> B
     where
         Self: Sized,
@@ -342,10 +347,17 @@ impl Iterator for CardsIter {
         }
         init
     }
+}
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.0.len();
-        (size, Some(size))
+impl DoubleEndedIterator for CardsIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.0 == Cards::NONE {
+            None
+        } else {
+            let card = self.0.max();
+            self.0 -= card;
+            Some(card)
+        }
     }
 }
 
