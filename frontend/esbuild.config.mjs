@@ -11,8 +11,9 @@ const context = await esbuild.context({
   minify: true,
   treeShaking: true,
   sourcemap: true,
-  format: "cjs",
+  format: "esm",
   outfile: 'build/goat.js',
+  logLevel: "info",
   plugins: [
     copy({
       assets: {

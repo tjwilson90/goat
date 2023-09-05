@@ -7,7 +7,7 @@
   "author": "Tres Brenan <michael@brenan.dev>",
   "license": "MIT",
   "scripts": {
-    "wasm": "./copy-wasm.sh",
+    "wasm": "./scripts/copy-wasm.sh",
     "build": "tsc --noEmit && node esbuild.config.mjs build",
     "serve": "tsc --noEmit && node esbuild.config.mjs watch"
   },
