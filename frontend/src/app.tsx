@@ -1,6 +1,7 @@
 import React from "react";
 import { render } from "react-dom";
 
+/** Main entry point to the game. */
 export const App = () => {
     return (
         <div>
