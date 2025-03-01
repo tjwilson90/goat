@@ -283,13 +283,13 @@ fn rummy_trick() {
 
 #[test]
 fn size_of() {
-    assert_eq!(mem::size_of::<ClientGame<(), ()>>(), 152);
+    assert_eq!(mem::size_of::<ClientGame<(), ()>>(), 160);
     assert_eq!(mem::size_of::<ClientPhase<(), ()>>(), 128);
     assert_eq!(mem::size_of::<WarPhase<u8, ClientWarHand, ()>>(), 128);
     assert_eq!(mem::size_of::<WarTrick>(), 88);
     assert_eq!(mem::size_of::<RummyPhase<ClientRummyHand, ()>>(), 80);
 
-    assert_eq!(mem::size_of::<ServerGame>(), 200);
+    assert_eq!(mem::size_of::<ServerGame>(), 208);
     assert_eq!(mem::size_of::<ServerPhase>(), 144);
     assert_eq!(
         mem::size_of::<WarPhase<Vec<Card>, ServerWarHand, ()>>(),

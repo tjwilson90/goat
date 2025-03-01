@@ -556,7 +556,8 @@ function updateRummyCards(gameId, game, index) {
             if (cardElem.dataset.card == checkedCardElem.dataset.card) {
                 checkElem.disabled = !cardElem.isSameNode(checkedCardElem);
             } else {
-                checkElem.disabled = cardElem.dataset.runmin != checkedCardElem.dataset.runmin;
+                checkElem.disabled = cardElem.dataset.runmin != checkedCardElem.dataset.runmin
+                        || !cardElem.classList.contains("canPlay");
             }
         }
     } else {

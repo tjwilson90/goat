@@ -140,7 +140,7 @@ fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     });
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     env_logger::init();
     let state: &Server = &*Box::leak(Box::default());

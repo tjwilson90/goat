@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 wasm-pack build crates/goat_wasm --target web --no-typescript
 rm -rf assets/wasm
 cp -r crates/goat_wasm/pkg assets/wasm
