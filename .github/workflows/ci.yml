@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install musl
         run: sudo apt-get install musl-tools
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install musl
         run: sudo apt-get install musl-tools
@@ -46,7 +46,7 @@ jobs:
 
       - name: Deploy dist
         if: github.ref == 'refs/heads/develop'
-        uses: appleboy/scp-action@v0.1.4
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -59,7 +59,7 @@ jobs:
 
       - name: Run dist
         if: github.ref == 'refs/heads/develop'
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -69,7 +69,7 @@ jobs:
           script: /opt/deploy-goat.sh
 
       - name: Upload dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: goat.tgz
           path: build/goat.tgz
