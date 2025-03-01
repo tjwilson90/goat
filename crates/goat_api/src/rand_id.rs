@@ -28,7 +28,7 @@ impl RandId {
 
 impl Distribution<RandId> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandId {
-        RandId(rng.gen::<u128>() & 0xffff_ffff_ffff_ffff_ffff_ffff)
+        RandId(rng.r#gen::<u128>() & 0xffff_ffff_ffff_ffff_ffff_ffff)
     }
 }
 
