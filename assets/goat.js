@@ -182,18 +182,10 @@ function updateRummyGame(gameId, game, gameElem) {
     for (let i = 0; i < game.players.length; i++) {
         const hand = game.phase.hands[i];
         const handElem = handElems[i];
-        if (index >= 0 && index != i) {
-            handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
-        } else if (hand.length == 0) {
-            handElem.textContent = "Hand: 0 cards";
-        } else {
-            handElem.textContent = "Hand: ";
-            for (const card of hand.cards) {
-                handElem.appendChild(pretty(card.card));
-            }
-        }
-        handElem.parentElement.classList.toggle("next", i === game.phase.next);
-        handElem.parentElement.classList.toggle("finished", hand.length === 0);
+        handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
+        const seatElem = handElem.closest(".seat");
+        seatElem.classList.toggle("next", i === game.phase.next);
+        seatElem.classList.toggle("finished", hand.length === 0);
 
         updateLastPlay(lastPlayElems[i], game.phase.history[i]);
     }
@@ -356,7 +348,11 @@ function warGameElement(gameId, game) {
 }
 
 function warGamePlayersElement(gameId, game, isPlayer) {
-    const seats = game.players.map((userId, i) => warGameSeatElement(userId, i, game.players.length));
+    const seats = game.players.map((userId, i) => gameSeatElement(
+        i,
+        game.players.length,
+        warGamePlayerInfoElement(userId)
+    ));
     const centerChildren = [createElement("p", {classList: ["deck-len"]})];
     if (isPlayer) {
         centerChildren.push(createElement("div", {
@@ -376,7 +372,7 @@ function warGamePlayersElement(gameId, game, isPlayer) {
         }));
     }
     return createElement("div", {
-        classList: ["war-table"],
+        classList: ["game-table", "war-table"],
         attributes: {seats: game.players.length},
         children: [
             createElement("div", {
@@ -389,13 +385,11 @@ function warGamePlayersElement(gameId, game, isPlayer) {
     });
 }
 
-function warGameSeatElement(userId, seatIndex, seatCount) {
+function gameSeatElement(seatIndex, seatCount, playerInfoElement) {
     return createElement("div", {
         classList: ["seat"],
         attributes: {seat: seatIndex, seats: seatCount},
-        children: [
-            warGamePlayerInfoElement(userId)
-        ]
+        children: [playerInfoElement]
     });
 }
 
@@ -486,30 +480,38 @@ function warCardElement(gameId, card, handler) {
 
 function rummyGameElement(gameId, game) {
     const element = document.createDocumentFragment();
-    element.appendChild(createElement("div", {
-        classList: ["horizontal"],
-        children: [
-            createElement("p", {
-                classList: ["trump"],
-                children: [
-                    createElement("span", {textContent: "Trump: "}),
-                    pretty(game.phase.trump)
-                ]
-            }),
-            createElement("p", {classList: ["rummy-trick"]})
-        ]
-    }));
-    element.appendChild(rummyGamePlayersElement(game));
+    element.appendChild(rummyGameTableElement(game));
     if (game.players.includes(window.userId)) {
         element.appendChild(rummyGameActionsElement(gameId));
     }
     return element;
 }
 
-function rummyGamePlayersElement(game) {
+function rummyGameTableElement(game) {
+    const seats = game.players.map((userId, i) => gameSeatElement(
+        i,
+        game.players.length,
+        rummyGamePlayerInfoElement(userId)
+    ));
     return createElement("div", {
-        classList: ["vertical"],
-        children: game.players.map(userId => rummyGamePlayerInfoElement(userId))
+        classList: ["game-table", "rummy-table"],
+        attributes: {seats: game.players.length},
+        children: [
+            createElement("div", {
+                classList: ["table-center"],
+                children: [
+                    createElement("p", {
+                        classList: ["trump"],
+                        children: [
+                            createElement("span", {textContent: "Trump: "}),
+                            pretty(game.phase.trump)
+                        ]
+                    }),
+                    createElement("p", {classList: ["rummy-trick"]})
+                ]
+            }),
+            ...seats
+        ]
     });
 }
 
