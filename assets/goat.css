@@ -620,31 +620,59 @@ button:disabled,
 .game-table[data-seats="8"] .seat[data-seat="6"] { --x: 9%;   --y: 50%; }
 .game-table[data-seats="8"] .seat[data-seat="7"] { --x: 21%;  --y: 20%; }
 
-/* 9+ players: oval seating gets cramped, so fall back to a readable wrapped
-   grid instead of overlapping seats. */
-.game-table:not([data-seats="3"]):not([data-seats="4"]):not([data-seats="5"]):not([data-seats="6"]):not([data-seats="7"]):not([data-seats="8"]) {
+/* Nine or more fixed-width seats do not fit reliably around the oval. Give
+   the controls, played cards, and seats separate grid rows so none overlap. */
+.game-table.crowded-table {
     aspect-ratio: auto;
     min-height: 0;
     background: none;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: var(--space-3);
-    justify-content: center;
-    padding-top: 56px; /* room for the centered phase controls */
+    align-items: stretch;
 }
 
-.game-table:not([data-seats="3"]):not([data-seats="4"]):not([data-seats="5"]):not([data-seats="6"]):not([data-seats="7"]):not([data-seats="8"])::before {
+.game-table.crowded-table::before {
     display: none;
 }
 
-.game-table:not([data-seats="3"]):not([data-seats="4"]):not([data-seats="5"]):not([data-seats="6"]):not([data-seats="7"]):not([data-seats="8"]) .seat {
+.game-table.crowded-table .table-center {
     position: static;
+    grid-column: 1 / -1;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    z-index: auto;
+}
+
+.game-table.crowded-table .table-trick {
+    position: static;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 112px;
+    max-height: 224px;
+    padding: var(--space-3);
+    transform: none;
+    background: linear-gradient(180deg, #ffffff 0%, #f2f4f6 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.game-table.crowded-table .seat {
+    position: static;
+    width: auto;
     transform: none;
 }
 
-.game-table:not([data-seats="3"]):not([data-seats="4"]):not([data-seats="5"]):not([data-seats="6"]):not([data-seats="7"]):not([data-seats="8"]) .table-center {
-    top: 10px;
-    transform: translateX(-50%);
+.game-table.crowded-table .seat.next .info {
+    transform: none;
+}
+
+.game-table.crowded-table .name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .seat .info {

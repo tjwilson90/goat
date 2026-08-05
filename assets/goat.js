@@ -346,6 +346,7 @@ function warGameElement(gameId, game) {
 }
 
 function warGamePlayersElement(gameId, game, isPlayer) {
+    const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
         game.players.length,
@@ -380,7 +381,7 @@ function warGamePlayersElement(gameId, game, isPlayer) {
         }));
     }
     return createElement("div", {
-        classList: ["game-table", "war-table"],
+        classList: ["game-table", "war-table", ...(crowded ? ["crowded-table"] : [])],
         attributes: {seats: game.players.length},
         children: [
             createElement("div", {
@@ -496,13 +497,14 @@ function rummyGameElement(gameId, game) {
 }
 
 function rummyGameTableElement(game) {
+    const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
         game.players.length,
         rummyGamePlayerInfoElement(userId)
     ));
     return createElement("div", {
-        classList: ["game-table", "rummy-table"],
+        classList: ["game-table", "rummy-table", ...(crowded ? ["crowded-table"] : [])],
         attributes: {seats: game.players.length},
         children: [
             createElement("div", {
