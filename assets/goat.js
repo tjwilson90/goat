@@ -543,7 +543,7 @@ function rummyGameActionsElement(gameId) {
             createElement("button", {
                 classList: ["play-range"],
                 textContent: "Play",
-                listeners: {click: (event) => playRunOne(gameId)}
+                listeners: {click: (event) => playRun(gameId)}
             }),
             createElement("div", {classList: ["rummy-cards", "horizontal"]})
         ]
@@ -567,6 +567,9 @@ function updateRummyCards(gameId, game, index) {
 
     pickUpElem.disabled = game.phase.trick.plays.length == 0;
     const checkedElems = gameElem.querySelectorAll(".rummy-card input:checked");
+    for (const cardElem of cardsElem.children) {
+        cardElem.classList.remove("selected-run");
+    }
     if (checkedElems.length == 0) {
         playRangeElem.disabled = true;
         for (const cardElem of cardsElem.children) {
@@ -576,6 +579,7 @@ function updateRummyCards(gameId, game, index) {
     } else if (checkedElems.length == 1) {
         playRangeElem.disabled = false;
         const checkedCardElem = checkedElems[0].parentElement;
+        checkedCardElem.classList.add("selected-run");
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
             if (cardElem.dataset.card == checkedCardElem.dataset.card) {
@@ -585,13 +589,22 @@ function updateRummyCards(gameId, game, index) {
                         || !cardElem.classList.contains("canPlay");
             }
         }
-    } else {
-        playRangeElem.disabled = true;
+    } else if (checkedElems.length == 2) {
+        playRangeElem.disabled = false;
+        const selectedCardElems = [...checkedElems].map(elem => elem.parentElement);
+        const lo = selectedCardElems[0].dataset.card;
+        const hi = selectedCardElems[1].dataset.card;
+        for (const card of cardsInRange(lo, hi)) {
+            const cardElem = selectedCardElems.find(elem => elem.dataset.card == card)
+                ?? [...cardsElem.children].find(elem => elem.dataset.card == card);
+            cardElem?.classList.add("selected-run");
+        }
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
-            checkElem.checked = false;
-            checkElem.disabled = !cardElem.classList.contains("canPlay");
+            checkElem.disabled = !checkElem.checked;
         }
+    } else {
+        playRangeElem.disabled = true;
     }
 }
 
@@ -605,7 +618,6 @@ function rummyCardElement(gameId, card) {
                 type: "checkbox",
                 classList: ["card-select"],
                 listeners: {click: (event) => {
-                    playRunMany(gameId);
                     const game = client.game(gameId);
                     const index = game.players.indexOf(window.userId);
                     updateRummyCards(gameId, game, index);
@@ -809,20 +821,12 @@ export function finishTrick(gameId) {
     applyAction(gameId, `{"type":"finishTrick"}`);
 }
 
-export function playRunOne(gameId) {
+export function playRun(gameId) {
     const checkedElems = document.querySelectorAll(`[data-gameId="${gameId}"] .rummy-card input:checked`)
-    const card = checkedElems[0].parentElement.dataset.card;
+    const lo = checkedElems[0].parentElement.dataset.card;
+    const hi = checkedElems[checkedElems.length - 1].parentElement.dataset.card;
     disableButtons(gameId);
-    applyAction(gameId, `{"type":"playRun","lo":"${card}","hi":"${card}"}`);
-}
-
-export function playRunMany(gameId) {
-    const checkedElems = document.querySelectorAll(`[data-gameId="${gameId}"] .rummy-card input:checked`)
-    if (checkedElems.length >= 2) {
-        const lo = checkedElems[0].parentElement.dataset.card;
-        const hi = checkedElems[1].parentElement.dataset.card;
-        applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
-    }
+    applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
 }
 
 export function pickUp(gameId) {

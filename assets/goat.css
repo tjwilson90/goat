@@ -895,6 +895,13 @@ span[data-suit] {
     box-shadow: var(--shadow);
 }
 
+.rummy-card.selected-run {
+    opacity: 1;
+    background: var(--green-100);
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 2px rgba(47, 158, 87, .25), var(--shadow-sm);
+}
+
 .rummy-cards {
     flex-wrap: wrap;
     gap: var(--space-2);
