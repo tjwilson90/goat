@@ -908,6 +908,14 @@ span[data-suit] {
     align-items: flex-end;
 }
 
+.rummy-actions {
+    align-items: center;
+}
+
+.war-actions {
+    align-items: center;
+}
+
 .card-select {
     height: 18px;
     width: 18px;

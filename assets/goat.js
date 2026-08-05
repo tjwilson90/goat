@@ -442,18 +442,8 @@ function nameElement(userId) {
 
 function warGameActionsElement(gameId) {
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["horizontal", "war-actions"],
         children: [
-            createElement("div", {
-                classList: ["vertical"],
-                children: [
-                    createElement("button", {
-                        classList: ["finish-trick"],
-                        textContent: "Finish Trick",
-                        listeners: {click: (event) => finishTrick(gameId)}
-                    }),
-                ]
-            }),
             createElement("div", {
                 classList: ["vertical"],
                 children: [
@@ -471,6 +461,16 @@ function warGameActionsElement(gameId) {
                             createElement("div", {classList: ["my-sloughs"]})
                         ]
                     })
+                ]
+            }),
+            createElement("div", {
+                classList: ["vertical"],
+                children: [
+                    createElement("button", {
+                        classList: ["finish-trick"],
+                        textContent: "Finish Trick",
+                        listeners: {click: (event) => finishTrick(gameId)}
+                    }),
                 ]
             })
         ]
@@ -533,19 +533,19 @@ function rummyGamePlayerInfoElement(userId) {
 
 function rummyGameActionsElement(gameId) {
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["horizontal", "rummy-actions"],
         children: [
+            createElement("div", {classList: ["rummy-cards", "horizontal"]}),
+            createElement("button", {
+                            classList: ["play-range"],
+                            textContent: "Play",
+                            listeners: {click: (event) => playRun(gameId)}
+                        }),
             createElement("button", {
                 classList: ["pick-up"],
                 textContent: "Pick Up",
                 listeners: {click: (event) => pickUp(gameId)}
             }),
-            createElement("button", {
-                classList: ["play-range"],
-                textContent: "Play",
-                listeners: {click: (event) => playRun(gameId)}
-            }),
-            createElement("div", {classList: ["rummy-cards", "horizontal"]})
         ]
     });
 }
