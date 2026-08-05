@@ -161,18 +161,16 @@ function updateRummyGame(gameId, game, gameElem) {
         gameElem.appendChild(rummyGameElement(gameId, game));
     }
 
-    const newTrickElem = document.createDocumentFragment();
-    newTrickElem.appendChild(document.createTextNode("Current Trick: "));
-    for (let i = 0; i < game.phase.trick.plays.length; i++) {
-        if (i != 0) {
-            newTrickElem.appendChild(document.createTextNode(", "));
-        }
-        let play = game.phase.trick.plays[i];
-        appendCardRange(newTrickElem, play[0], play[1]);
-    }
     const trickElem = gameElem.querySelector(".rummy-trick");
     trickElem.innerHTML = null;
-    trickElem.appendChild(newTrickElem);
+    for (const [lo, hi] of game.phase.trick.plays) {
+        for (const card of cardsInRange(lo, hi)) {
+            trickElem.appendChild(createElement("div", {
+                classList: ["trick-card"],
+                children: [pretty(card)]
+            }));
+        }
+    }
 
     const index = game.players.indexOf(window.userId);
 
@@ -353,7 +351,13 @@ function warGamePlayersElement(gameId, game, isPlayer) {
         game.players.length,
         warGamePlayerInfoElement(userId)
     ));
-    const centerChildren = [createElement("p", {classList: ["deck-len"]})];
+    const centerChildren = [createElement("div", {
+        classList: ["deck-status"],
+        children: [
+            createElement("p", {classList: ["deck-len"]}),
+            trumpCardElement()
+        ]
+    })];
     if (isPlayer) {
         centerChildren.push(createElement("div", {
             classList: ["deck-actions", "horizontal"],
@@ -369,6 +373,10 @@ function warGamePlayersElement(gameId, game, isPlayer) {
                     listeners: {click: (event) => draw(gameId)}
                 })
             ]
+        }));
+    } else {
+        centerChildren.push(createElement("div", {
+            classList: ["deck-actions", "deck-actions-placeholder"]
         }));
     }
     return createElement("div", {
@@ -500,16 +508,13 @@ function rummyGameTableElement(game) {
             createElement("div", {
                 classList: ["table-center"],
                 children: [
-                    createElement("p", {
-                        classList: ["trump"],
-                        children: [
-                            createElement("span", {textContent: "Trump: "}),
-                            pretty(game.phase.trump)
-                        ]
-                    }),
-                    createElement("p", {classList: ["rummy-trick"]})
+                    trumpCardElement(game.phase.trump),
+                    createElement("div", {
+                        classList: ["deck-actions", "deck-actions-placeholder"]
+                    })
                 ]
             }),
+            createElement("div", {classList: ["table-trick", "rummy-trick"]}),
             ...seats
         ]
     });
@@ -702,6 +707,22 @@ const SUITS = {
     "D": "♦",
     "H": "♥",
     "S": "♠",
+}
+
+function cardsInRange(lo, hi) {
+    const ranks = Object.keys(RANKS);
+    const start = ranks.indexOf(lo[0]);
+    const end = ranks.indexOf(hi[0]);
+    return ranks.slice(start, end + 1).map(rank => rank + lo[1]);
+}
+
+function trumpCardElement(card) {
+    const faceUp = card !== undefined;
+    return createElement("div", {
+        classList: ["trump-card", faceUp ? "face-up" : "face-down"],
+        title: faceUp ? "Trump card" : "Face-down trump card",
+        children: faceUp ? [pretty(card)] : []
+    });
 }
 
 function pretty(card) {

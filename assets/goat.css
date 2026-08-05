@@ -485,7 +485,7 @@ button:disabled,
     position: absolute;
     /* Sit near the top of the white table (which spans 23%–77%), leaving the
        whole lower area free for the trick to grow into. */
-    top: 30%;
+    top: 36%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 3;
@@ -497,6 +497,8 @@ button:disabled,
 
 .table-center .deck-len {
     margin: 0;
+    min-width: 120px;
+    text-align: center;
     color: var(--ink);
     font-weight: 700;
     font-size: 15px;
@@ -507,9 +509,50 @@ button:disabled,
     box-shadow: var(--shadow-sm);
 }
 
+.deck-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.trump-card {
+    width: 32px;
+    height: 44px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 3px 8px rgba(15, 30, 25, .25);
+}
+
+.trump-card.face-down {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
+        linear-gradient(225deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
+        linear-gradient(315deg, rgba(255, 255, 255, .18) 25%, transparent 25%) 0 0 / 10px 10px,
+        linear-gradient(45deg, rgba(255, 255, 255, .18) 25%, #356b9a 25%) 0 0 / 10px 10px;
+    outline: 1px solid #245278;
+}
+
+.trump-card.face-up {
+    color: var(--ink);
+    background: var(--surface);
+    outline: 1px solid var(--border-strong);
+    font-size: 16px;
+    font-weight: 700;
+}
+
 .deck-actions {
+    min-height: 34px;
     gap: var(--space-2);
     justify-content: center;
+}
+
+.deck-actions-placeholder {
+    visibility: hidden;
 }
 
 .deck-actions .play-top,
@@ -629,7 +672,7 @@ button:disabled,
 
 .table-trick {
     position: absolute;
-    top: 42%;
+    top: calc(36% + 62px);
     bottom: 26%;
     left: 50%;
     width: 40%;
@@ -689,42 +732,8 @@ button:disabled,
     border-radius: var(--radius-sm);
 }
 
-/* Trump indicator (rummy) */
-.trump {
-    margin: 0;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: var(--space-1);
-}
-
-.rummy-trick {
-    margin: 0;
-    color: var(--ink-muted);
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 2px;
-}
-
-.rummy-table .table-center {
-    top: 50%;
-    width: 40%;
-    max-height: 46%;
-}
-
-.rummy-table .trump {
-    padding: 8px 14px;
-    color: var(--ink);
-    background: var(--surface-muted);
-    border: 1px solid var(--border-strong);
-    border-radius: 999px;
-    box-shadow: var(--shadow-sm);
-}
-
 .rummy-table .rummy-trick {
-    justify-content: center;
-    overflow-y: auto;
+    gap: 6px;
 }
 
 /* Player info tiles */
