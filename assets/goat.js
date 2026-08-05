@@ -17,11 +17,18 @@ function getCookie(name) {
     return null;
 }
 
+function updateEmptyState() {
+    const hasGame = document.getElementById("games").children.length > 0;
+    document.getElementById("empty-state").classList.toggle("hidden", hasGame);
+    document.getElementById("end-game").classList.toggle("hidden", !hasGame);
+}
+
 export function updateGame(gameId, replay) {
     let gameElem = document.querySelector(`[data-gameId="${gameId}"]`);
     if (!gameElem) {
         gameElem = unstartedGameElement(gameId);
         document.getElementById("games").appendChild(gameElem);
+        updateEmptyState();
     }
     const game = client.game(gameId);
     switch (game.phase.type) {
@@ -84,15 +91,11 @@ function updateWarGame(gameId, game, gameElem) {
     const deckLenElem = gameElem.querySelector(".deck-len");
     deckLenElem.textContent = `Deck: ${game.phase.deck} card${game.phase.deck == 1 ? "" : "s"}`;
 
-    updateTrickElements(
-        gameElem.querySelectorAll(".current .trick-played"),
-        gameElem.querySelectorAll(".current .trick-sloughed"),
+    updateTableTrick(
+        gameElem.querySelector(".table-trick"),
+        gameElem.querySelectorAll(".seat"),
+        game,
         game.phase.currTrick
-    );
-    updateTrickElements(
-        gameElem.querySelectorAll(".previous .trick-played"),
-        gameElem.querySelectorAll(".previous .trick-sloughed"),
-        game.phase.prevTrick
     );
 
     const handElems = gameElem.querySelectorAll(".other-hand");
@@ -318,7 +321,7 @@ function unstartedGamePlayerElement(gameId, userId) {
         attributes: {userId, userId},
         classList: ["name", "horizontal"],
         children: [
-            createElement("span", {textContent: user.name}),
+            ...nameChildren(user),
             createElement("button", {
                 textContent: "X",
                 listeners: {click: (event) => leaveGame(gameId, userId)}
@@ -343,24 +346,55 @@ function unstartedGameAddPlayerElement(userId) {
 }
 
 function warGameElement(gameId, game) {
+    const isPlayer = game.players.includes(window.userId);
     const element = document.createDocumentFragment();
-    element.appendChild(createElement("p", {classList: ["deck-len"]}));
-    element.appendChild(warGamePlayersElement(game));
-    if (game.players.includes(window.userId)) {
+    element.appendChild(warGamePlayersElement(gameId, game, isPlayer));
+    if (isPlayer) {
         element.appendChild(warGameActionsElement(gameId));
     }
     return element;
 }
 
-function warGamePlayersElement(game) {
+function warGamePlayersElement(gameId, game, isPlayer) {
+    const seats = game.players.map((userId, i) => warGameSeatElement(userId, i, game.players.length));
+    const centerChildren = [createElement("p", {classList: ["deck-len"]})];
+    if (isPlayer) {
+        centerChildren.push(createElement("div", {
+            classList: ["deck-actions", "horizontal"],
+            children: [
+                createElement("button", {
+                    classList: ["play-top"],
+                    textContent: "Play Top",
+                    listeners: {click: (event) => playTop(gameId)}
+                }),
+                createElement("button", {
+                    classList: ["draw"],
+                    textContent: "Draw",
+                    listeners: {click: (event) => draw(gameId)}
+                })
+            ]
+        }));
+    }
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["war-table"],
+        attributes: {seats: game.players.length},
         children: [
             createElement("div", {
-                children: game.players.map(userId => warGamePlayerInfoElement(userId))
+                classList: ["table-center"],
+                children: centerChildren
             }),
-            warGameTrickElement(game, "Current"),
-            warGameTrickElement(game, "Previous")
+            createElement("div", {classList: ["table-trick"]}),
+            ...seats
+        ]
+    });
+}
+
+function warGameSeatElement(userId, seatIndex, seatCount) {
+    return createElement("div", {
+        classList: ["seat"],
+        attributes: {seat: seatIndex, seats: seatCount},
+        children: [
+            warGamePlayerInfoElement(userId)
         ]
     });
 }
@@ -376,33 +410,32 @@ function warGamePlayerInfoElement(userId) {
     });
 }
 
+function botBadge() {
+    return createElement("span", {
+        classList: ["bot-badge"],
+        textContent: "BOT",
+        title: "Automated player"
+    });
+}
+
+function nameChildren(user) {
+    const children = [createElement("span", {classList: ["name-text"], textContent: user.name})];
+    if (user.bot) {
+        children.push(botBadge());
+    }
+    return children;
+}
+
 function nameElement(userId) {
     const user = client.user(userId);
     const element = createElement("p", {
         attributes: {userId, userId},
         classList: ["name"],
-        textContent: user.name
+        children: nameChildren(user)
     });
     element.classList.toggle("online", user.online);
     element.classList.toggle("self", userId === window.userId);
     return element;
-}
-
-function warGameTrickElement(game, kind) {
-    return createElement("div", {
-        children: game.players.map(userId => warGamePlayerTrickElement(kind))
-    });
-}
-
-function warGamePlayerTrickElement(kind) {
-    return createElement("div", {
-        classList: ["trick", kind.toLowerCase()],
-        children: [
-            createElement("p", {textContent: `${kind} trick:`}),
-            createElement("p", {classList: ["trick-played"]}),
-            createElement("p", {classList: ["trick-sloughed"]})
-        ]
-    });
 }
 
 function warGameActionsElement(gameId) {
@@ -412,21 +445,6 @@ function warGameActionsElement(gameId) {
             createElement("div", {
                 classList: ["vertical"],
                 children: [
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("button", {
-                                classList: ["play-top"],
-                                textContent: "Play Top",
-                                listeners: {click: (event) => playTop(gameId)}
-                            }),
-                            createElement("button", {
-                                classList: ["draw"],
-                                textContent: "Draw",
-                                listeners: {click: (event) => draw(gameId)}
-                            })
-                        ]
-                    }),
                     createElement("button", {
                         classList: ["finish-trick"],
                         textContent: "Finish Trick",
@@ -623,26 +641,41 @@ function createElement(tagName, options) {
     return element;
 }
 
-function updateTrickElements(playElements, sloughElements, trick) {
-    for (const element of playElements) {
-        element.innerHTML = "Plays: ";
+function updateTableTrick(trickElem, seatElements, game, trick) {
+    for (let i = 0; i < seatElements.length; i++) {
+        const next = trick && (trick.winner === undefined
+            ? i === trick.next
+            : (trick.endMask & (1 << i)) !== 0);
+        seatElements[i].classList.toggle("next", !!next);
     }
-    for (const element of sloughElements) {
-        element.innerHTML = "Sloughs: ";
-    }
-    if (!trick) {
+
+    trickElem.innerHTML = null;
+    if (!trick || trick.plays.length === 0) {
+        trickElem.classList.remove("has-plays");
         return;
     }
-    for (let i = 0; i < playElements.length; i++) {
-        const next = trick.winner === undefined ? i === trick.next : (trick.endMask & (1 << i)) !== 0;
-        playElements[i].parentElement.classList.toggle("next", next);
-    }
+    trickElem.classList.add("has-plays");
+
     for (const play of trick.plays) {
-        const parent = play.kind == "slough" ? sloughElements[play.player] : playElements[play.player];
-        const child = pretty(play.card);
-        child.classList.add(play.kind);
-        child.classList.toggle("lead", play.lead);
-        parent.appendChild(child);
+        const userId = game.players[play.player];
+        const card = pretty(play.card);
+        card.classList.add(play.kind);
+        card.classList.toggle("lead", play.lead);
+
+        const entry = createElement("div", {
+            classList: ["trick-card", play.kind],
+            children: [
+                createElement("span", {
+                    classList: ["trick-card-who"],
+                    textContent: client.user(userId).name
+                }),
+                card
+            ]
+        });
+        if (play.kind === "slough") {
+            entry.title = "Sloughed";
+        }
+        trickElem.appendChild(entry);
     }
 }
 
@@ -681,6 +714,7 @@ export function forgetGame(gameId) {
     for (const gameNode of gameNodes) {
         gameNode.remove();
     }
+    updateEmptyState();
 }
 
 export function updateUser(userId, user) {
@@ -696,8 +730,7 @@ export function updateUser(userId, user) {
     for (const userNode of userNodes) {
         userNode.classList.toggle("online", user.online);
         userNode.classList.toggle("self", userId === window.userId);
-        const textNode = userNode.querySelector("span") ?? userNode;
-        textNode.textContent = user.name;
+        userNode.replaceChildren(...nameChildren(user));
     }
     for (const userContainerNode of document.querySelectorAll(".sorted-users")) {
         [...userContainerNode.children]
@@ -800,8 +833,19 @@ document.getElementById("name").addEventListener("change", (event) => {
     }
 });
 
-document.getElementById("new-game").addEventListener("click", (event) => {
-    fetch("./new_game", { method: "POST" });
+document.getElementById("new-game").addEventListener("click", async (event) => {
+    const response = await fetch("./new_game", { method: "POST" });
+    if (response.status === 409) {
+        alert("A game is already in progress. End it before starting a new one.");
+    }
+});
+
+updateEmptyState();
+
+document.getElementById("end-game").addEventListener("click", (event) => {
+    if (confirm("End the current game for everyone?")) {
+        fetch("./end_game", { method: "POST" });
+    }
 });
 
 document.getElementById("rules").addEventListener("click", (event) => {

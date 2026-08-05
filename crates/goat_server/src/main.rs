@@ -20,6 +20,13 @@ mod subscriber;
 #[cfg(test)]
 mod test;
 
+const DEFAULT_BOTS: [&str; 3] = ["Tim", "Simone", "Stephen"];
+
+fn bot_user_id(name: &str) -> UserId {
+    let hash = Sha256::digest(name.as_bytes());
+    UserId(RandId::from_hash(&hash))
+}
+
 fn user_id() -> impl Filter<Extract = (UserId,), Error = Rejection> + Clone {
     warp::cookie("USER_SECRET").map(|id: String| {
         let hash = Sha256::digest(id.as_bytes());
@@ -48,10 +55,40 @@ fn new_game(
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     fn handle(state: &Server) -> impl Reply {
         let seed = rand::thread_rng().next_u64();
-        let game_id = state.new_game(seed);
-        warp::reply::json(&game_id)
+        match state.new_game(seed) {
+            Some(game_id) => {
+                for name in DEFAULT_BOTS {
+                    let user_id = bot_user_id(name);
+                    if let Err(e) = state.apply_action(user_id, game_id, Action::Join { user_id })
+                    {
+                        log::warn!("Failed to auto-join bot {}: {}", name, e);
+                    }
+                }
+                warp::reply::with_status(
+                    warp::reply::json(&game_id),
+                    warp::http::StatusCode::OK,
+                )
+            }
+            None => warp::reply::with_status(
+                warp::reply::json(&"a game already exists"),
+                warp::http::StatusCode::CONFLICT,
+            ),
+        }
     }
     warp::path!("new_game")
+        .and(warp::post())
+        .and(warp::any().map(move || state))
+        .map(handle)
+}
+
+fn end_game(
+    state: &'static Server,
+) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
+    fn handle(state: &Server) -> impl Reply {
+        state.end_game();
+        warp::reply()
+    }
+    warp::path!("end_game")
         .and(warp::post())
         .and(warp::any().map(move || state))
         .map(handle)
@@ -125,7 +162,7 @@ fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
         let hash = Sha256::digest(name.as_bytes());
         let user_id = UserId(RandId::from_hash(&hash));
-        let rx = state.subscribe(user_id, name);
+        let rx = state.subscribe_bot(user_id, name);
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
         let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {
             Action::Slough { .. } | Action::Goat { .. } => Duration::from_millis(750),
@@ -173,10 +210,15 @@ async fn main() {
     run_bot(state, "Felicia (bot)".to_string(), AdaptSimulate);
     run_bot(state, "George (bot)".to_string(), AdaptSimulate);
     run_bot(state, "Hannah (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Simone".to_string(), AdaptSimulate);
+    run_bot(state, "Stephen".to_string(), AdaptSimulate);
+    run_bot(state, "Tim".to_string(), AdaptSimulate);
+    run_bot(state, "Varun".to_string(), AdaptSimulate);
 
     let app = root()
         .or(assets())
         .or(new_game(state))
+        .or(end_game(state))
         .or(change_name(state))
         .or(apply_action(state))
         .or(subscribe(state))

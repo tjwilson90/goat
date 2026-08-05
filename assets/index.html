@@ -2,17 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Goat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <script type="module" src="assets/goat.js"></script>
     <script type="module" src="assets/wasm/goat_wasm.js"></script>
     <link rel="stylesheet" href="assets/goat.css">
     <link rel="icon" type="image/svg" href="assets/goat.svg">
 </head>
 <body>
-    <input type="text" id="name" autocomplete="off" placeholder="Change Name...">
-    <button type="button" id="new-game">New Game</button>
-    <button type="button" id="rules">Rules</button>
-    <ul id="subscribers" class="sorted-users vertical"></ul>
-    <div id="games"></div>
+    <header class="app-header">
+        <div class="brand">
+            <img class="brand-logo" src="assets/goat.svg" alt="">
+            <span class="brand-name">Goat</span>
+        </div>
+        <div class="toolbar">
+            <button type="button" id="rules" class="btn btn-ghost">Rules</button>
+        </div>
+    </header>
+    <main class="app-body">
+        <aside class="sidebar">
+            <h2 class="sidebar-title">Players</h2>
+            <ul id="subscribers" class="sorted-users vertical"></ul>
+            <div class="sidebar-controls">
+                <input type="text" id="name" autocomplete="off" placeholder="Change name…">
+                <button type="button" id="end-game" class="btn btn-danger">End Game</button>
+            </div>
+        </aside>
+        <section class="content">
+            <div id="empty-state">
+                <button type="button" id="new-game" class="btn btn-primary btn-lg">New Game</button>
+            </div>
+            <div id="games"></div>
+        </section>
+    </main>
 </body>
 </html>
