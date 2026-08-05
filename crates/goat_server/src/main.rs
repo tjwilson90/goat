@@ -21,6 +21,7 @@ mod subscriber;
 mod test;
 
 const DEFAULT_BOTS: [&str; 3] = ["Tim", "Simone", "Stephen"];
+const END_GAME_PASSWORD: &str = "goattime455";
 
 fn bot_user_id(name: &str) -> UserId {
     let hash = Sha256::digest(name.as_bytes());
@@ -84,13 +85,23 @@ fn new_game(
 fn end_game(
     state: &'static Server,
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    fn handle(state: &Server) -> impl Reply {
-        state.end_game();
-        warp::reply()
+    #[derive(Deserialize)]
+    struct Wrapper {
+        password: String,
+    }
+    fn handle(state: &Server, Wrapper { password }: Wrapper) -> impl Reply {
+        let status = if password == END_GAME_PASSWORD {
+            state.end_game();
+            warp::http::StatusCode::OK
+        } else {
+            warp::http::StatusCode::UNAUTHORIZED
+        };
+        warp::reply::with_status(warp::reply(), status)
     }
     warp::path!("end_game")
         .and(warp::post())
         .and(warp::any().map(move || state))
+        .and(warp::body::json())
         .map(handle)
 }
 

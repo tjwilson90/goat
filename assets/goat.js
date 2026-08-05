@@ -875,9 +875,17 @@ document.getElementById("new-game").addEventListener("click", async (event) => {
 
 updateEmptyState();
 
-document.getElementById("end-game").addEventListener("click", (event) => {
-    if (confirm("End the current game for everyone?")) {
-        fetch("./end_game", { method: "POST" });
+document.getElementById("end-game").addEventListener("click", async (event) => {
+    const password = prompt("Enter the password to end the game for everyone:");
+    if (password !== null) {
+        const response = await fetch("./end_game", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({password}),
+        });
+        if (response.status === 401) {
+            alert("Incorrect password.");
+        }
     }
 });
 
