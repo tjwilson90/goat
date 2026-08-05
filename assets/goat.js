@@ -722,7 +722,8 @@ export function updateUser(userId, user) {
     if (userNodes.length == 0) {
         const userNode = createElement("li", {
             classList: ["name"],
-            attributes: {userId, userId}
+            attributes: {userId, userId},
+            children: nameChildren(user)
         });
         document.getElementById("subscribers").appendChild(userNode);
         userNodes = [userNode];
@@ -730,7 +731,12 @@ export function updateUser(userId, user) {
     for (const userNode of userNodes) {
         userNode.classList.toggle("online", user.online);
         userNode.classList.toggle("self", userId === window.userId);
-        userNode.replaceChildren(...nameChildren(user));
+        const nameText = userNode.querySelector(":scope > .name-text");
+        if (nameText) {
+            nameText.textContent = user.name;
+        } else {
+            userNode.textContent = user.name;
+        }
     }
     for (const userContainerNode of document.querySelectorAll(".sorted-users")) {
         [...userContainerNode.children]

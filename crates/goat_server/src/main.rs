@@ -202,14 +202,14 @@ async fn main() {
         }
     });
 
-    run_bot(state, "Alice (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Bob (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Carla (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Dimitri (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Eric (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Felicia (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "George (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Hannah (bot)".to_string(), AdaptSimulate);
+    run_bot(state, "Alice".to_string(), AdaptSimulate);
+    run_bot(state, "Bob".to_string(), AdaptSimulate);
+    run_bot(state, "Carla".to_string(), AdaptSimulate);
+    run_bot(state, "Dimitri".to_string(), AdaptSimulate);
+    run_bot(state, "Eric".to_string(), AdaptSimulate);
+    run_bot(state, "Felicia".to_string(), AdaptSimulate);
+    run_bot(state, "George".to_string(), AdaptSimulate);
+    run_bot(state, "Hannah".to_string(), AdaptSimulate);
     run_bot(state, "Simone".to_string(), AdaptSimulate);
     run_bot(state, "Stephen".to_string(), AdaptSimulate);
     run_bot(state, "Tim".to_string(), AdaptSimulate);

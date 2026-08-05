@@ -307,6 +307,11 @@ button:disabled,
     align-items: center;
     justify-content: center;
     z-index: 5;
+    pointer-events: none;
+}
+
+#empty-state #new-game {
+    pointer-events: auto;
 }
 
 .hidden {
