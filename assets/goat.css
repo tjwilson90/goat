@@ -3,9 +3,6 @@
     --bg-100: #eaf3fb;   /* lightest — top of the page gradient */
     --bg-300: #cfe2f4;   /* mid */
     --bg-500: #b3d2ee;   /* deepest visible blue */
-    --felt-900: var(--bg-500);
-    --felt-800: var(--bg-300);
-    --felt-700: var(--bg-100);
 
     --surface: #ffffff;
     --surface-muted: #f3f6fa;
@@ -29,7 +26,6 @@
     --danger: #d64545;
 
     --chrome-ink: #1d2b3a;
-    --chrome-ink-muted: #55677c;
 
     --radius-sm: 6px;
     --radius: 10px;

@@ -349,7 +349,6 @@ function warGamePlayersElement(gameId, game, isPlayer) {
     const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
-        game.players.length,
         warGamePlayerInfoElement(userId)
     ));
     const centerChildren = [createElement("div", {
@@ -394,10 +393,10 @@ function warGamePlayersElement(gameId, game, isPlayer) {
     });
 }
 
-function gameSeatElement(seatIndex, seatCount, playerInfoElement) {
+function gameSeatElement(seatIndex, playerInfoElement) {
     return createElement("div", {
         classList: ["seat"],
-        attributes: {seat: seatIndex, seats: seatCount},
+        attributes: {seat: seatIndex},
         children: [playerInfoElement]
     });
 }
@@ -500,7 +499,6 @@ function rummyGameTableElement(game) {
     const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
-        game.players.length,
         rummyGamePlayerInfoElement(userId)
     ));
     return createElement("div", {
@@ -672,10 +670,8 @@ function updateTableTrick(trickElem, seatElements, game, trick) {
 
     trickElem.innerHTML = null;
     if (!trick || trick.plays.length === 0) {
-        trickElem.classList.remove("has-plays");
         return;
     }
-    trickElem.classList.add("has-plays");
 
     for (const play of trick.plays) {
         const userId = game.players[play.player];
