@@ -19,8 +19,8 @@ function getCookie(name) {
 
 function updateEmptyState() {
     const hasGame = document.getElementById("games").children.length > 0;
-    document.getElementById("empty-state").classList.toggle("hidden", hasGame);
-    document.getElementById("end-game").classList.toggle("hidden", !hasGame);
+    document.getElementById("empty-state").hidden = hasGame;
+    document.getElementById("end-game").hidden = !hasGame;
 }
 
 export function updateGame(gameId, replay) {
@@ -360,11 +360,11 @@ function warGamePlayersElement(gameId, game, isPlayer) {
         }));
     } else {
         centerChildren.push(createElement("div", {
-            classList: ["deck-actions", "deck-actions-placeholder"]
+            classList: ["deck-actions"]
         }));
     }
     return createElement("div", {
-        classList: ["game-table", "war-table", ...(crowded ? ["crowded-table"] : [])],
+        classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
         attributes: {seats: game.players.length},
         children: [
             createElement("div", {
@@ -435,15 +435,10 @@ function warGameActionsElement(gameId) {
                     createElement("div", {classList: ["my-war-hand"]})
                 ]
             }),
-            createElement("div", {
-                classList: ["vertical"],
-                children: [
-                    createElement("button", {
-                        classList: ["finish-trick"],
-                        textContent: "Finish Trick",
-                        listeners: {click: (event) => finishTrick(gameId)}
-                    }),
-                ]
+            createElement("button", {
+                classList: ["finish-trick"],
+                textContent: "Finish Trick",
+                listeners: {click: (event) => finishTrick(gameId)}
             })
         ]
     });
@@ -495,7 +490,7 @@ function rummyGameTableElement(game) {
         rummyGamePlayerInfoElement(userId)
     ));
     return createElement("div", {
-        classList: ["game-table", "rummy-table", ...(crowded ? ["crowded-table"] : [])],
+        classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
         attributes: {seats: game.players.length},
         children: [
             createElement("div", {
@@ -503,7 +498,7 @@ function rummyGameTableElement(game) {
                 children: [
                     trumpCardElement(game.phase.trump),
                     createElement("div", {
-                        classList: ["deck-actions", "deck-actions-placeholder"]
+                        classList: ["deck-actions"]
                     })
                 ]
             }),
@@ -597,8 +592,6 @@ function updateRummyCards(gameId, game, index) {
             const checkElem = cardElem.querySelector("input");
             checkElem.disabled = !checkElem.checked;
         }
-    } else {
-        playRangeElem.disabled = true;
     }
 }
 
@@ -670,11 +663,11 @@ function updateTableTrick(trickElem, seatElements, game, trick) {
     for (const play of trick.plays) {
         const userId = game.players[play.player];
         const card = pretty(play.card);
-        card.classList.add(play.kind);
         card.classList.toggle("lead", play.lead);
 
         const entry = createElement("div", {
-            classList: ["trick-card", play.kind],
+            classList: ["trick-card"],
+            attributes: {kind: play.kind},
             children: [
                 createElement("span", {
                     classList: ["trick-card-who"],

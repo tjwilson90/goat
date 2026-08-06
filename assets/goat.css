@@ -80,7 +80,7 @@ body {
     align-items: flex-start;
 }
 
-/* ---- Header / toolbar ---------------------------------------------------- */
+/* ---- Header -------------------------------------------------------------- */
 .app-header {
     display: flex;
     align-items: center;
@@ -114,13 +114,6 @@ body {
     color: var(--chrome-ink);
 }
 
-.toolbar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-}
-
 /* ---- Form controls ------------------------------------------------------- */
 input[type="text"],
 select {
@@ -141,9 +134,9 @@ input[type="text"]::placeholder {
 
 input[type="text"]:focus,
 select:focus {
-    outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(224, 165, 59, .3);
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
 }
 
 #name {
@@ -151,8 +144,7 @@ select:focus {
 }
 
 /* Buttons -- base */
-button,
-.btn {
+button {
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -168,25 +160,21 @@ button,
                 border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 
-button:hover:not(:disabled),
-.btn:hover:not(:disabled) {
+button:hover:not(:disabled) {
     border-color: var(--border-strong);
     background: var(--surface-muted);
 }
 
-button:active:not(:disabled),
-.btn:active:not(:disabled) {
+button:active:not(:disabled) {
     transform: translateY(1px);
 }
 
-button:focus-visible,
-.btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(224, 165, 59, .4);
+button:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
 }
 
-button:disabled,
-.btn:disabled {
+button:disabled {
     cursor: not-allowed;
     opacity: .45;
     box-shadow: none;
@@ -201,16 +189,6 @@ button:disabled,
 .btn-primary:hover:not(:disabled) {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
-}
-
-.btn-ghost {
-    background: var(--surface);
-    border-color: var(--border-strong);
-    color: var(--ink);
-}
-
-.btn-ghost:hover:not(:disabled) {
-    background: var(--surface-muted);
 }
 
 .btn-danger {
@@ -297,20 +275,12 @@ button:disabled,
 }
 
 #empty-state {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    pointer-events: none;
+    display: grid;
+    min-height: calc(100dvh - 110px);
+    place-items: center;
 }
 
-#empty-state #new-game {
-    pointer-events: auto;
-}
-
-.hidden {
+[hidden] {
     display: none !important;
 }
 
@@ -334,16 +304,13 @@ button:disabled,
     align-items: center;
     gap: var(--space-2);
     margin: 0;
+    min-width: 0;
 }
 
 /* Offline players are dimmed everywhere */
 .name:not(.online) {
     color: var(--ink-faint);
     opacity: .8;
-}
-
-#subscribers .name:not(.online) {
-    color: var(--ink-faint);
 }
 
 /* Your own name stands out */
@@ -412,6 +379,9 @@ button:disabled,
 
 /* Keep the online/offline status dot glued to the name, badge trailing it. */
 .name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
@@ -425,12 +395,7 @@ button:disabled,
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-}
-
-.game .deck-len {
-    margin: 0;
-    font-weight: 600;
-    color: var(--ink-muted);
+    container: game / inline-size;
 }
 
 /* ---- War and rummy phases: seated oval table ----------------------------- */
@@ -547,13 +512,7 @@ button:disabled,
     justify-content: center;
 }
 
-.deck-actions-placeholder {
-    visibility: hidden;
-}
-
-.deck-actions .play-top,
-.deck-actions .draw {
-    padding: 8px 14px;
+.deck-actions button {
     font-size: 14px;
 }
 
@@ -565,9 +524,6 @@ button:disabled,
     top: var(--y, 50%);
     transform: translate(-50%, -50%);
     width: 168px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
     z-index: 2;
 }
 
@@ -620,8 +576,8 @@ button:disabled,
    the controls, played cards, and seats separate grid rows so none overlap. */
 .game-table.crowded-table {
     aspect-ratio: auto;
+    max-height: none;
     min-height: 0;
-    background: none;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
     gap: var(--space-3);
@@ -637,6 +593,7 @@ button:disabled,
     grid-column: 1 / -1;
     transform: none;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
     z-index: auto;
 }
@@ -665,22 +622,74 @@ button:disabled,
     transform: none;
 }
 
-.game-table.crowded-table .name-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* The oval needs enough horizontal space for its fixed-width seats. Switch
+   every player count to the non-overlapping grid when its game gets narrow. */
+@container game (max-width: 860px) {
+    .game-table {
+        aspect-ratio: auto;
+        max-height: none;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+        gap: var(--space-3);
+        align-items: stretch;
+    }
+
+    .game-table::before {
+        display: none;
+    }
+
+    .game-table .table-center {
+        position: static;
+        grid-column: 1 / -1;
+        transform: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        z-index: auto;
+    }
+
+    .game-table .table-trick {
+        position: static;
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 112px;
+        max-height: 224px;
+        padding: var(--space-3);
+        transform: none;
+        background: linear-gradient(180deg, #ffffff 0%, #f2f4f6 100%);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .game-table .seat {
+        position: static;
+        width: auto;
+        transform: none;
+    }
+
+    .game-table .seat.next .info {
+        transform: none;
+    }
 }
 
 .seat .info {
     min-width: 0;
     width: 100%;
     padding: 8px 10px;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
     gap: 2px;
     background: var(--surface);
     border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
     /* Lift the seat off the white tabletop with a defined shadow. */
     box-shadow: 0 6px 16px rgba(15, 30, 25, .16);
+}
+
+.seat .info p {
+    margin: 0;
 }
 
 .seat .info .name {
@@ -692,6 +701,11 @@ button:disabled,
 .seat .info .last-play {
     font-size: 12.5px;
     line-height: 1.35;
+    color: var(--ink-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
 }
 
 .table-trick {
@@ -735,10 +749,11 @@ button:disabled,
     white-space: nowrap;
 }
 
-.trick-card.slough {
+.trick-card[data-kind="slough"] {
     background: var(--surface-muted);
     border-style: dashed;
-    opacity: .8;
+    font-style: italic;
+    opacity: .7;
 }
 
 /* Unstarted game: player list + selects */
@@ -756,58 +771,12 @@ button:disabled,
     border-radius: var(--radius-sm);
 }
 
-.rummy-table .rummy-trick {
-    gap: 6px;
-}
-
-/* Player info tiles */
-.info {
-    background: var(--surface-muted);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: var(--space-3);
-    min-height: 115px;
-    min-width: 190px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-}
-
-.info p {
-    margin: 0;
-}
-
-.info .other-hand,
-.info .won,
-.info .last-play {
-    font-size: 14px;
-    color: var(--ink-muted);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px;
-}
-
-.next {
-    background: var(--green-100);
-    border-color: var(--green-500);
-    box-shadow: 0 0 0 1px var(--green-500) inset;
-}
-
-.finished {
-    background: var(--pink-100);
-    border-color: var(--pink-500);
-}
-
 .seat.finished .info {
     background: var(--pink-100);
     border-color: var(--pink-500);
 }
 
 .seat.next {
-    background: none;
-    border-color: transparent;
-    box-shadow: none;
     z-index: 4; /* lift above neighbouring seats while enlarged */
 }
 
@@ -907,6 +876,10 @@ span[data-suit] {
     font-size: 11px;
 }
 
+.war-card-action:focus-visible {
+    outline-offset: -3px;
+}
+
 .war-card-action + .war-card-action {
     border-left: 1px solid var(--border);
 }
@@ -955,17 +928,20 @@ span[data-suit] {
 }
 
 .rummy-cards {
+    flex: 0 1 auto;
+    min-width: 0;
     flex-wrap: wrap;
     gap: var(--space-2);
     align-items: flex-end;
 }
 
-.rummy-actions {
+.rummy-actions,
+.war-actions {
     align-items: center;
 }
 
-.war-actions {
-    align-items: center;
+.rummy-actions {
+    flex-wrap: wrap;
 }
 
 .war-hand-row {
@@ -986,18 +962,16 @@ span[data-suit] {
     cursor: not-allowed;
 }
 
-.lead.playTop {
+.trick-card[data-kind="playTop"] [data-suit].lead {
     text-decoration: underline overline;
 }
+
 .lead {
     text-decoration: underline;
 }
-.playTop {
+
+.trick-card[data-kind="playTop"] [data-suit] {
     text-decoration: overline;
-}
-.slough {
-    opacity: .7;
-    font-style: italic;
 }
 
 .game[data-phase="goat"] {
@@ -1020,6 +994,9 @@ span[data-suit] {
     .sidebar {
         position: static;
     }
+    #empty-state {
+        min-height: 220px;
+    }
 }
 
 @media (max-width: 560px) {
@@ -1028,16 +1005,18 @@ span[data-suit] {
         align-items: stretch;
         gap: var(--space-3);
     }
-    .toolbar {
-        justify-content: space-between;
+    #rules {
+        align-self: flex-start;
     }
-    #name {
-        flex: 1;
-    }
+    .rummy-actions,
     .war-actions,
     .war-hand-row {
         align-items: stretch;
         flex-direction: column;
+    }
+    .rummy-cards {
+        flex: none;
+        width: 100%;
     }
     .plays-label {
         align-self: flex-start;

@@ -6,7 +6,7 @@
     <title>Goat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap">
     <script type="module" src="assets/goat.js"></script>
     <script type="module" src="assets/wasm/goat_wasm.js"></script>
     <link rel="stylesheet" href="assets/goat.css">
@@ -18,9 +18,7 @@
             <img class="brand-logo" src="assets/goat.svg" alt="">
             <span class="brand-name">Goat</span>
         </div>
-        <div class="toolbar">
-            <button type="button" id="rules" class="btn btn-ghost">Rules</button>
-        </div>
+        <button type="button" id="rules">Rules</button>
     </header>
     <main class="app-body">
         <aside class="sidebar">
@@ -28,12 +26,12 @@
             <ul id="subscribers" class="sorted-users vertical"></ul>
             <div class="sidebar-controls">
                 <input type="text" id="name" autocomplete="off" placeholder="Change name…">
-                <button type="button" id="end-game" class="btn btn-danger">End Game</button>
+                <button type="button" id="end-game" class="btn-danger" hidden>End Game</button>
             </div>
         </aside>
         <section class="content">
             <div id="empty-state">
-                <button type="button" id="new-game" class="btn btn-primary btn-lg">New Game</button>
+                <button type="button" id="new-game" class="btn-primary btn-lg">New Game</button>
             </div>
             <div id="games"></div>
         </section>
