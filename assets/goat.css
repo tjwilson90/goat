@@ -850,16 +850,16 @@ button:disabled,
     align-self: center;
 }
 
-.my-plays,
-.my-sloughs {
+.my-war-hand {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-1);
-    min-height: 40px;
-    padding: var(--space-1);
+    gap: var(--space-2);
+    min-height: 76px;
+    padding: var(--space-2);
     background: var(--surface-sunken);
     border-radius: var(--radius-sm);
-    flex: 1;
+    width: fit-content;
+    max-width: 100%;
 }
 
 /* ---- Playing cards ------------------------------------------------------- */
@@ -875,22 +875,50 @@ span[data-suit] {
     font-variant-numeric: tabular-nums;
 }
 
-/* Clickable card faces (war plays/sloughs and rummy cards) */
-.war-card {
-    min-width: 40px;
-    padding: 8px 6px;
+/* War hand cards expose both actions without duplicating the card face. */
+.war-hand-card {
+    min-width: 76px;
+    overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
+}
+
+.war-card {
+    padding: 9px 6px 7px;
+    text-align: center;
     font-weight: 700;
     font-size: 15px;
 }
 
-.war-card:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    background: #fff;
+.war-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--border);
+}
+
+.war-card-action {
+    min-width: 0;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 11px;
+}
+
+.war-card-action + .war-card-action {
+    border-left: 1px solid var(--border);
+}
+
+.war-card-action.play-card:not(:disabled) {
+    color: var(--accent-ink);
+    background: #fff6df;
+}
+
+.war-card-action.slough-card:not(:disabled) {
+    color: var(--ink-muted);
+    background: var(--surface-muted);
 }
 
 .rummy-card {
@@ -938,6 +966,13 @@ span[data-suit] {
 
 .war-actions {
     align-items: center;
+}
+
+.war-hand-row {
+    align-items: center;
+    flex: none;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .card-select {
@@ -998,5 +1033,13 @@ span[data-suit] {
     }
     #name {
         flex: 1;
+    }
+    .war-actions,
+    .war-hand-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .plays-label {
+        align-self: flex-start;
     }
 }

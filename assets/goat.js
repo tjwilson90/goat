@@ -102,17 +102,9 @@ function updateWarGame(gameId, game, gameElem) {
     const wonElems = gameElem.querySelectorAll(".won");
     for (let i = 0; i < game.players.length; i++) {
         const hand = game.phase.hands[i];
+        const handLength = hand.type == "hidden" ? hand.length : hand.cards.length;
         const handElem = handElems[i];
-        if (hand.type == "hidden") {
-            handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
-        } else if (hand.cards.length == 0) {
-            handElem.textContent = "Hand: 0 cards";
-        } else {
-            handElem.textContent = "Hand: ";
-            for (const card of hand.cards) {
-                handElem.appendChild(pretty(card.card));
-            }
-        }
+        handElem.textContent = `Hand: ${handLength} card${handLength == 1 ? "" : "s"}`;
         const won = game.phase.won[i];
         const wonElem = wonElems[i];
         wonElem.textContent = `Won: ${won} card${won == 1 ? "" : "s"}`;
@@ -132,25 +124,17 @@ function updateWarGame(gameId, game, gameElem) {
         finishTrickElem.disabled = (!game.phase.finished && game.phase.currTrick.winner === undefined)
             || (game.phase.currTrick.endMask & (1 << index)) === 0;
 
-        const playsElem = gameElem.querySelector(".my-plays");
-        const newPlaysElem = document.createDocumentFragment();
+        const handElem = gameElem.querySelector(".my-war-hand");
+        const newHandElem = document.createDocumentFragment();
         for (const card of game.phase.hands[index].cards) {
-            const cardElem = playsElem.querySelector(`[data-card="${card}"]`) ?? warCardElement(gameId, card.card, playCard);
-            cardElem.disabled = !card.playable;
-            newPlaysElem.appendChild(cardElem);
+            const cardElem = handElem.querySelector(`[data-card="${card.card}"]`)
+                ?? warHandCardElement(gameId, card.card);
+            cardElem.querySelector(".play-card").disabled = !card.playable;
+            cardElem.querySelector(".slough-card").disabled = !card.sloughable;
+            newHandElem.appendChild(cardElem);
         }
-        playsElem.innerHTML = null;
-        playsElem.appendChild(newPlaysElem);
-
-        const sloughsElem = gameElem.querySelector(".my-sloughs");
-        const newSloughsElem = document.createDocumentFragment();
-        for (const card of game.phase.hands[index].cards) {
-            const cardElem = sloughsElem.querySelector(`[data-card="${card}"]`) ?? warCardElement(gameId, card.card, slough);
-            cardElem.disabled = !card.sloughable;
-            newSloughsElem.appendChild(cardElem);
-        }
-        sloughsElem.innerHTML = null;
-        sloughsElem.appendChild(newSloughsElem);
+        handElem.innerHTML = null;
+        handElem.appendChild(newHandElem);
     }
 }
 
@@ -445,22 +429,10 @@ function warGameActionsElement(gameId) {
         classList: ["horizontal", "war-actions"],
         children: [
             createElement("div", {
-                classList: ["vertical"],
+                classList: ["horizontal", "war-hand-row"],
                 children: [
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("span", {classList: ["plays-label"], textContent: "Plays: "}),
-                            createElement("div", {classList: ["my-plays"]})
-                        ]
-                    }),
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("span", {classList: ["plays-label"], textContent: "Sloughs: "}),
-                            createElement("div", {classList: ["my-sloughs"]})
-                        ]
-                    })
+                    createElement("span", {classList: ["plays-label"], textContent: "Hand: "}),
+                    createElement("div", {classList: ["my-war-hand"]})
                 ]
             }),
             createElement("div", {
@@ -477,12 +449,33 @@ function warGameActionsElement(gameId) {
     });
 }
 
-function warCardElement(gameId, card, handler) {
-    return createElement("button", {
-        classList: ["war-card"],
+function warHandCardElement(gameId, card) {
+    return createElement("div", {
+        classList: ["war-hand-card"],
         attributes: {card: card},
-        children: [pretty(card)],
-        listeners: {click: (event) => handler(gameId, card)}
+        children: [
+            createElement("div", {
+                classList: ["war-card"],
+                children: [pretty(card)]
+            }),
+            createElement("div", {
+                classList: ["war-card-actions"],
+                children: [
+                    createElement("button", {
+                        classList: ["war-card-action", "play-card"],
+                        textContent: "Play",
+                        title: `Play ${card}`,
+                        listeners: {click: (event) => playCard(gameId, card)}
+                    }),
+                    createElement("button", {
+                        classList: ["war-card-action", "slough-card"],
+                        textContent: "Slough",
+                        title: `Slough ${card}`,
+                        listeners: {click: (event) => slough(gameId, card)}
+                    })
+                ]
+            })
+        ]
     });
 }
 
@@ -535,12 +528,13 @@ function rummyGameActionsElement(gameId) {
     return createElement("div", {
         classList: ["horizontal", "rummy-actions"],
         children: [
+            createElement("span", {classList: ["plays-label"], textContent: "Hand: "}),
             createElement("div", {classList: ["rummy-cards", "horizontal"]}),
             createElement("button", {
-                            classList: ["play-range"],
-                            textContent: "Play",
-                            listeners: {click: (event) => playRun(gameId)}
-                        }),
+                classList: ["play-range"],
+                textContent: "Play",
+                listeners: {click: (event) => playRun(gameId)}
+            }),
             createElement("button", {
                 classList: ["pick-up"],
                 textContent: "Pick Up",
