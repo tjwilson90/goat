@@ -412,6 +412,35 @@ function nameChildren(user) {
     return children;
 }
 
+function requestNameChange() {
+    const currentName = client.user(window.userId).name;
+    const name = prompt("Change your name:", currentName);
+    if (!name || name === currentName) {
+        return;
+    }
+    document.cookie = "USER_NAME=" + name;
+    fetch("./change_name", {method: "POST"});
+}
+
+function subscriberNameElement(userId, user) {
+    const self = userId === window.userId;
+    const element = createElement("li", {
+        classList: ["name"],
+        attributes: {userId, userId},
+        children: self ? [createElement("button", {
+            type: "button",
+            classList: ["change-name"],
+            ariaLabel: `Change name, currently ${user.name}`,
+            title: "Change your name",
+            children: nameChildren(user),
+            listeners: {click: requestNameChange}
+        })] : nameChildren(user)
+    });
+    element.classList.toggle("online", user.online);
+    element.classList.toggle("self", self);
+    return element;
+}
+
 function nameElement(userId) {
     const user = client.user(userId);
     const element = createElement("p", {
@@ -740,22 +769,22 @@ export function forgetGame(gameId) {
 export function updateUser(userId, user) {
     let userNodes = document.querySelectorAll(`[data-userId="${userId}"]`);
     if (userNodes.length == 0) {
-        const userNode = createElement("li", {
-            classList: ["name"],
-            attributes: {userId, userId},
-            children: nameChildren(user)
-        });
+        const userNode = subscriberNameElement(userId, user);
         document.getElementById("subscribers").appendChild(userNode);
         userNodes = [userNode];
     }
     for (const userNode of userNodes) {
         userNode.classList.toggle("online", user.online);
         userNode.classList.toggle("self", userId === window.userId);
-        const nameText = userNode.querySelector(":scope > .name-text");
+        const nameText = userNode.querySelector(".name-text");
         if (nameText) {
             nameText.textContent = user.name;
         } else {
             userNode.textContent = user.name;
+        }
+        const changeNameButton = userNode.querySelector(":scope > .change-name");
+        if (changeNameButton) {
+            changeNameButton.ariaLabel = `Change name, currently ${user.name}`;
         }
     }
     for (const userContainerNode of document.querySelectorAll(".sorted-users")) {
@@ -842,14 +871,6 @@ function signalUpdate() {
         document.title = "* Goat";
     }
 }
-
-document.getElementById("name").addEventListener("change", (event) => {
-    if (event.target.value) {
-        document.cookie = "USER_NAME=" + event.target.value;
-        fetch("./change_name", { method: "POST" });
-        event.target.value = "";
-    }
-});
 
 document.getElementById("new-game").addEventListener("click", async (event) => {
     const response = await fetch("./new_game", { method: "POST" });
