@@ -281,7 +281,7 @@ function updateRummyGame(gameId, game, gameElem) {
         const cardsElem = gameElem.querySelector(".rummy-cards");
         const newCardsElem = document.createDocumentFragment();
         for (const card of game.phase.hands[index].cards) {
-            newCardsElem.appendChild(rummyCardElement(gameId, card));
+            newCardsElem.appendChild(rummyCardElement(gameId, card, game.phase.next === index));
         }
         cardsElem.innerHTML = null;
         cardsElem.appendChild(newCardsElem);
@@ -742,7 +742,7 @@ function updateRummyCards(gameId, game, index) {
     }
 }
 
-function rummyCardElement(gameId, card) {
+function rummyCardElement(gameId, card, isTurn) {
     const element = createElement("div", {
         classList: ["rummy-card", "vertical"],
         attributes: {card: card.card, runmin: card.runMin},
@@ -759,7 +759,7 @@ function rummyCardElement(gameId, card) {
             })
         ]
     });
-    element.classList.toggle("canPlay", card.canPlay);
+    element.classList.toggle("canPlay", isTurn && card.canPlay);
     return element;
 }
 
