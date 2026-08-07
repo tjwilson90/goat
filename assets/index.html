@@ -24,13 +24,24 @@
         <aside class="sidebar">
             <h2 class="sidebar-title">Players</h2>
             <ul id="subscribers" class="sorted-users vertical"></ul>
-            <button type="button" id="end-game" class="btn-danger" hidden>End Game</button>
         </aside>
         <section class="content">
-            <div id="empty-state">
-                <button type="button" id="new-game" class="btn-primary btn-lg">New Game</button>
+            <div id="game-list-view">
+                <div class="games-heading">
+                    <div>
+                        <h1 id="games-heading" tabindex="-1">Games</h1>
+                        <p>Choose a live game or start a new one.</p>
+                    </div>
+                    <button type="button" id="new-game" class="btn-primary">New Game</button>
+                </div>
+                <p id="empty-state">There are no live games yet.</p>
+                <div id="game-list"></div>
             </div>
-            <div id="games"></div>
+            <div id="game-detail" hidden>
+                <button type="button" id="all-games">← All Games</button>
+                <h1 id="game-detail-heading" class="game-detail-heading" tabindex="-1"></h1>
+                <div id="games"></div>
+            </div>
         </section>
     </main>
 </body>

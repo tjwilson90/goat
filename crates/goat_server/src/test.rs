@@ -124,7 +124,7 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
             },
         }
     );
-    let game_id = server.new_game(1).unwrap();
+    let game_id = server.new_game(1);
     server.apply_action(watcher, game_id, Action::Join { user_id: cover })?;
     server.apply_action(watcher, game_id, Action::Join { user_id: duck })?;
     server.apply_action(watcher, game_id, Action::Join { user_id: top })?;
@@ -245,7 +245,7 @@ async fn test_bots() -> Result<(), GoatError> {
     let top = run_bot(server.clone(), "top".to_string(), PlayTopSimple);
     let mut goat_count = HashMap::new();
     for _ in 0..10000 {
-        let game_id = server.new_game(rand::thread_rng().next_u64()).unwrap();
+        let game_id = server.new_game(rand::thread_rng().next_u64());
         server.apply_action(watcher, game_id, Action::Join { user_id: cover })?;
         server.apply_action(watcher, game_id, Action::Join { user_id: duck })?;
         server.apply_action(watcher, game_id, Action::Join { user_id: top })?;

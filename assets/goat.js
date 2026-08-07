@@ -5,6 +5,9 @@ await init();
 const client = new Client();
 window.client = client;
 
+let selectedGameId = null;
+let pendingGameFocusId = null;
+
 function getCookie(name) {
     const prefix = name + "=";
     const cookies = decodeURIComponent(document.cookie).split(";");
@@ -18,17 +21,100 @@ function getCookie(name) {
 }
 
 function updateEmptyState() {
-    const hasGame = document.getElementById("games").children.length > 0;
-    document.getElementById("empty-state").hidden = hasGame;
-    document.getElementById("end-game").hidden = !hasGame;
+    document.getElementById("empty-state").hidden = document.getElementById("game-list").children.length > 0;
+}
+
+function gameElement(gameId) {
+    return [...document.getElementById("games").children]
+        .find(element => element.getAttribute("data-gameId") === gameId);
+}
+
+function gameSummaryElementFor(gameId) {
+    return [...document.getElementById("game-list").children]
+        .find(element => element.getAttribute("data-gameSummary") === gameId);
+}
+
+function phaseLabel(game) {
+    switch (game.phase.type) {
+        case "unstarted": return "Waiting for players";
+        case "war": return "War round";
+        case "rummy": return "Rummy round";
+        case "goat": return "Complete";
+    }
+}
+
+function gameLabel(gameId) {
+    return `Game ${gameId.slice(0, 6)}`;
+}
+
+function createGameSummaryElement(gameId) {
+    return createElement("button", {
+        type: "button",
+        classList: ["game-summary"],
+        attributes: {gameSummary: gameId},
+        listeners: {click: () => showGame(gameId, true)},
+        children: [
+            createElement("span", {classList: ["game-summary-title"]}),
+            createElement("span", {classList: ["game-summary-status"]}),
+            createElement("span", {classList: ["game-summary-players"]}),
+            createElement("span", {classList: ["game-summary-arrow"], textContent: "→"})
+        ]
+    });
+}
+
+function updateGameSummary(gameId, game) {
+    let summary = gameSummaryElementFor(gameId);
+    if (!summary) {
+        summary = createGameSummaryElement(gameId);
+        document.getElementById("game-list").appendChild(summary);
+        updateEmptyState();
+    }
+    summary.querySelector(".game-summary-title").textContent = gameLabel(gameId);
+    summary.querySelector(".game-summary-status").textContent = phaseLabel(game);
+    const names = game.players.map(userId => client.user(userId).name);
+    summary.querySelector(".game-summary-players").textContent = names.length > 0
+        ? names.join(", ")
+        : "No players yet";
+}
+
+function showGame(gameId, focusHeading = false) {
+    if (focusHeading) {
+        pendingGameFocusId = gameId;
+    }
+    const activeGame = gameElement(gameId);
+    selectedGameId = gameId;
+    if (!activeGame) {
+        return;
+    }
+    document.getElementById("game-list-view").hidden = true;
+    document.getElementById("game-detail").hidden = false;
+    const heading = document.getElementById("game-detail-heading");
+    heading.textContent = gameLabel(gameId);
+    for (const game of document.getElementById("games").children) {
+        game.hidden = game !== activeGame;
+    }
+    if (pendingGameFocusId === gameId) {
+        pendingGameFocusId = null;
+        heading.focus();
+    }
+}
+
+function showGameList(focusHeading = false) {
+    selectedGameId = null;
+    pendingGameFocusId = null;
+    document.getElementById("game-detail").hidden = true;
+    document.getElementById("game-list-view").hidden = false;
+    if (focusHeading) {
+        document.getElementById("games-heading").focus();
+    }
 }
 
 export function updateGame(gameId, replay) {
-    let gameElem = document.querySelector(`[data-gameId="${gameId}"]`);
+    let gameElem = gameElement(gameId);
     if (!gameElem) {
         gameElem = unstartedGameElement(gameId);
+        gameElem.hidden = selectedGameId !== gameId;
         document.getElementById("games").appendChild(gameElem);
-        updateEmptyState();
     }
     const game = client.game(gameId);
     switch (game.phase.type) {
@@ -42,13 +128,18 @@ export function updateGame(gameId, replay) {
             updateRummyGame(gameId, game, gameElem);
             break;
         case "goat":
-            updateCompleteGame(game, gameElem, replay);
+            updateCompleteGame(gameId, game, gameElem, replay);
             break;
+    }
+    updateGameSummary(gameId, game);
+    if (selectedGameId === gameId) {
+        showGame(gameId);
     }
 }
 
 function updateUnstartedGame(gameId, game, gameElem) {
     const notPlayerIds = new Set(client.userIds());
+    const setupPending = gameElem.hasAttribute("data-setup-pending");
 
     const playersElem = gameElem.querySelector(".players");
     const newPlayerElems = document.createDocumentFragment();
@@ -59,28 +150,43 @@ function updateUnstartedGame(gameId, game, gameElem) {
     }
     playersElem.innerHTML = null;
     playersElem.appendChild(newPlayerElems);
+    for (const button of playersElem.querySelectorAll("button")) {
+        button.disabled = setupPending;
+    }
 
     const addPlayersElem = gameElem.querySelector(".add-players");
-    addPlayersElem.disabled = game.players.length >= 16;
+    const playerLimitReached = game.players.length >= 16;
     const newAddPlayerElems = [];
     for (let userId of notPlayerIds) {
-        let addPlayerElem = addPlayersElem.querySelector(`[data-userId="${userId}"]`) ?? unstartedGameAddPlayerElement(userId);
+        let addPlayerElem = addPlayersElem.querySelector(`[data-userId="${userId}"]`) ?? unstartedGameAddPlayerElement(gameId, userId);
+        addPlayerElem.disabled = playerLimitReached || setupPending;
         newAddPlayerElems.push(addPlayerElem);
     }
-    const addPlayersDefaultOption = addPlayersElem.firstChild;
-    addPlayersElem.innerHTML = null;
-    addPlayersElem.appendChild(addPlayersDefaultOption);
     newAddPlayerElems
-        .sort((a, b) => a.textContent < b.textContent ? -1 : 1)
-        .forEach(child => addPlayersElem.appendChild(child));
-    addPlayersElem.value = "";
+        .sort((a, b) => a.textContent.localeCompare(b.textContent) || a.dataset.userid.localeCompare(b.dataset.userid));
+    addPlayersElem.replaceChildren(...newAddPlayerElems);
 
-    const startGameElem = gameElem.querySelector(".start-game");
-    startGameElem.disabled = game.players.length < 3;
+    gameElem.querySelector(".player-count").textContent = `Players: ${game.players.length} / 16`;
+    const addPlayerStatus = gameElem.querySelector(".add-player-status");
+    addPlayerStatus.textContent = playerLimitReached
+        ? "Player limit reached."
+        : newAddPlayerElems.length === 0 ? "No other players available." : "";
+    addPlayerStatus.hidden = !addPlayerStatus.textContent;
+
+    const playersNeeded = Math.max(0, 3 - game.players.length);
+    for (const button of gameElem.querySelectorAll(".start-game-actions button")) {
+        button.disabled = playersNeeded > 0 || setupPending;
+    }
+    const startStatus = gameElem.querySelector(".start-game-status");
+    startStatus.textContent = playersNeeded > 0
+        ? `Add ${playersNeeded} more player${playersNeeded === 1 ? "" : "s"} to start.`
+        : "";
+    startStatus.hidden = !startStatus.textContent;
 }
 
 function updateWarGame(gameId, game, gameElem) {
     if (gameElem.dataset.phase !== "war") {
+        gameElem.removeAttribute("data-setup-pending");
         gameElem.innerHTML = null;
         gameElem.setAttribute("data-phase", "war");
         gameElem.appendChild(warGameElement(gameId, game));
@@ -188,48 +294,54 @@ function updateLastPlay(elem, action) {
         return;
     }
     elem.innerHTML = null;
-    elem.appendChild(createElement("span", {textContent: "Last Play: "}));
+    elem.appendChild(createElement("span", {
+        classList: ["last-play-label"],
+        textContent: "Last Play:"
+    }));
     switch (action.type) {
         case "lead":
-            elem.appendChild(createElement("span", {textContent: "Lead "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Lead", action.lo, action.hi));
             break;
         case "play":
-            elem.appendChild(createElement("span", {textContent: "Play "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Play", action.lo, action.hi));
             break;
         case "kill":
-            elem.appendChild(createElement("span", {textContent: "Kill "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Kill", action.lo, action.hi));
             break;
         case "killAndLead":
-            elem.appendChild(createElement("span", {textContent: "Kill "}));
-            appendCardRange(elem, action.killLo, action.killHi);
-            elem.appendChild(createElement("span", {textContent: ", Lead "}));
-            appendCardRange(elem, action.leadLo, action.leadHi);
+            elem.appendChild(lastPlayPart("Kill", action.killLo, action.killHi, ","));
+            elem.appendChild(lastPlayPart("Lead", action.leadLo, action.leadHi));
             break;
         case "pickUp":
-            elem.appendChild(createElement("span", {textContent: "Pick Up "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Pick Up", action.lo, action.hi));
             break;
     }
 }
 
-function appendCardRange(elem, lo, hi) {
-    elem.appendChild(pretty(lo));
+function lastPlayPart(label, lo, hi, suffix = "") {
+    const children = [
+        document.createTextNode(`${label} `),
+        pretty(lo)
+    ];
     if (lo !== hi) {
-        elem.appendChild(createElement("span", {textContent: " - "}));
-        elem.appendChild(pretty(hi));
+        children.push(document.createTextNode(" – "), pretty(hi));
     }
+    if (suffix) {
+        children.push(document.createTextNode(suffix));
+    }
+    return createElement("span", {
+        classList: ["last-play-part"],
+        children
+    });
 }
 
-function updateCompleteGame(game, gameElem, replay) {
+function updateCompleteGame(gameId, game, gameElem, replay) {
     gameElem.innerHTML = null;
     gameElem.setAttribute("data-phase", "goat");
     gameElem.appendChild(document.createTextNode("Goat: "));
     const goat = game.players[game.phase.goat];
     gameElem.appendChild(nameElement(goat));
-    if (!replay && game.phase.noise !== undefined) {
+    if (!replay && selectedGameId === gameId && game.phase.noise !== undefined) {
         const noise = new Audio(`./assets/noises/goat-${game.phase.noise}.mp3`);
         noise.play();
     }
@@ -240,6 +352,9 @@ function unstartedGameElement(gameId) {
         classList: ["game"],
         attributes: {gameId: gameId, phase: "unstarted"},
         children: [
+            createElement("p", {
+                classList: ["player-count"],
+            }),
             createElement("ul", {classList: ["players", "vertical"]}),
             unstartedGameAddPlayersElement(gameId),
             unstartedGameStartGameElement(gameId)
@@ -248,57 +363,59 @@ function unstartedGameElement(gameId) {
 }
 
 function unstartedGameAddPlayersElement(gameId) {
-    return createElement("select", {
-        classList: ["add-players", "sorted-users"],
-        listeners: {
-            change: (event) => {
-                if (event.target.value) {
-                    joinGame(gameId, event.target.value);
-                }
-            }
-        },
+    return createElement("fieldset", {
+        classList: ["setup-group"],
         children: [
-            createElement("option", {
-                value: "",
-                textContent: "Add a Player"
+            createElement("legend", {textContent: "Add a player"}),
+            createElement("div", {classList: ["add-players", "sorted-users"]}),
+            createElement("p", {
+                classList: ["setup-status", "add-player-status"],
+                hidden: true
             })
         ]
     });
 }
 
 function unstartedGameStartGameElement(gameId) {
-    return createElement("select", {
-        classList: ["start-game"],
-        listeners: {change: (event) => startGame(gameId, event.target.value)},
+    return createElement("fieldset", {
+        classList: ["setup-group"],
         children: [
-            createElement("option", {
-                value: "",
-                textContent: "Start Game"
+            createElement("legend", {textContent: "Start game"}),
+            createElement("div", {
+                classList: ["start-game-actions"],
+                children: [1, 2, 3].map(numDecks => createElement("button", {
+                    type: "button",
+                    textContent: `Start with ${numDecks} deck${numDecks === 1 ? "" : "s"}`,
+                    listeners: {click: event => runSetupAction(
+                        event.currentTarget,
+                        () => startGame(gameId, numDecks),
+                        "The game could not be started.",
+                        true
+                    )}
+                }))
             }),
-            unstartedGameStartGameNumDecksElement(1),
-            unstartedGameStartGameNumDecksElement(2),
-            unstartedGameStartGameNumDecksElement(3)
+            createElement("p", {
+                classList: ["setup-status", "start-game-status"],
+            })
         ]
-    });
-}
-
-function unstartedGameStartGameNumDecksElement(numDecks) {
-    return createElement("option", {
-        value: numDecks,
-        textContent: `Use ${numDecks} deck${numDecks == 1 ? "" : "s"}`
     });
 }
 
 function unstartedGamePlayerElement(gameId, userId) {
     const user = client.user(userId);
     const element = createElement("li", {
-        attributes: {userId, userId},
+        attributes: {userId},
         classList: ["name", "horizontal"],
         children: [
             ...nameChildren(user),
             createElement("button", {
-                textContent: "X",
-                listeners: {click: (event) => leaveGame(gameId, userId)}
+                type: "button",
+                textContent: "Remove",
+                listeners: {click: event => runSetupAction(
+                    event.currentTarget,
+                    () => leaveGame(gameId, userId),
+                    `${user.name} could not be removed from the game.`
+                )}
             })
         ],
     });
@@ -307,12 +424,18 @@ function unstartedGamePlayerElement(gameId, userId) {
     return element;
 }
 
-function unstartedGameAddPlayerElement(userId) {
+function unstartedGameAddPlayerElement(gameId, userId) {
     const user = client.user(userId);
-    const element = createElement("option", {
-        attributes: {userId, userId},
-        value: userId,
-        textContent: user.name
+    const element = createElement("button", {
+        type: "button",
+        classList: ["add-player", "name"],
+        attributes: {userId},
+        children: nameChildren(user),
+        listeners: {click: event => runSetupAction(
+            event.currentTarget,
+            () => joinGame(gameId, userId),
+            `${user.name} could not be added to the game.`
+        )}
     });
     element.classList.toggle("online", user.online);
     element.classList.toggle("self", userId === window.userId);
@@ -400,7 +523,6 @@ function botBadge() {
     return createElement("span", {
         classList: ["bot-badge"],
         textContent: "BOT",
-        title: "Automated player"
     });
 }
 
@@ -426,12 +548,10 @@ function subscriberNameElement(userId, user) {
     const self = userId === window.userId;
     const element = createElement("li", {
         classList: ["name"],
-        attributes: {userId, userId},
+        attributes: {userId},
         children: self ? [createElement("button", {
             type: "button",
             classList: ["change-name"],
-            ariaLabel: `Change name, currently ${user.name}`,
-            title: "Change your name",
             children: nameChildren(user),
             listeners: {click: requestNameChange}
         })] : nameChildren(user)
@@ -444,7 +564,7 @@ function subscriberNameElement(userId, user) {
 function nameElement(userId) {
     const user = client.user(userId);
     const element = createElement("p", {
-        attributes: {userId, userId},
+        attributes: {userId},
         classList: ["name"],
         children: nameChildren(user)
     });
@@ -488,13 +608,11 @@ function warHandCardElement(gameId, card) {
                     createElement("button", {
                         classList: ["war-card-action", "play-card"],
                         textContent: "Play",
-                        title: `Play ${card}`,
                         listeners: {click: (event) => playCard(gameId, card)}
                     }),
                     createElement("button", {
                         classList: ["war-card-action", "slough-card"],
                         textContent: "Slough",
-                        title: `Slough ${card}`,
                         listeners: {click: (event) => slough(gameId, card)}
                     })
                 ]
@@ -746,7 +864,6 @@ function trumpCardElement(card) {
     const faceUp = card !== undefined;
     return createElement("div", {
         classList: ["trump-card", faceUp ? "face-up" : "face-down"],
-        title: faceUp ? "Trump card" : "Face-down trump card",
         children: faceUp ? [pretty(card)] : []
     });
 }
@@ -759,9 +876,10 @@ function pretty(card) {
 }
 
 export function forgetGame(gameId) {
-    const gameNodes = document.querySelectorAll(`[data-gameId="${gameId}"]`);
-    for (const gameNode of gameNodes) {
-        gameNode.remove();
+    gameElement(gameId)?.remove();
+    gameSummaryElementFor(gameId)?.remove();
+    if (selectedGameId === gameId) {
+        showGameList(true);
     }
     updateEmptyState();
 }
@@ -782,16 +900,21 @@ export function updateUser(userId, user) {
         } else {
             userNode.textContent = user.name;
         }
-        const changeNameButton = userNode.querySelector(":scope > .change-name");
-        if (changeNameButton) {
-            changeNameButton.ariaLabel = `Change name, currently ${user.name}`;
-        }
     }
     for (const userContainerNode of document.querySelectorAll(".sorted-users")) {
         [...userContainerNode.children]
             .filter(child => child.hasAttribute("data-userId"))
-            .sort((a, b) => a.firstChild.textContent < b.firstChild.textContent ? -1 : 1)
+            .sort((a, b) => a.textContent.localeCompare(b.textContent)
+                || a.getAttribute("data-userId").localeCompare(b.getAttribute("data-userId")))
             .forEach(child => userContainerNode.appendChild(child));
+    }
+    for (const gameElem of document.getElementById("games").children) {
+        const gameId = gameElem.getAttribute("data-gameId");
+        const game = client.game(gameId);
+        if (game.phase.type === "unstarted") {
+            updateUnstartedGame(gameId, game, gameElem);
+        }
+        updateGameSummary(gameId, game);
     }
 }
 
@@ -803,16 +926,16 @@ export function forgetUser(userId) {
 }
 
 export function joinGame(gameId, userId) {
-    applyAction(gameId, `{"type":"join","userId":"${userId}"}`);
+    return applyAction(gameId, `{"type":"join","userId":"${userId}"}`);
 }
 
 export function leaveGame(gameId, userId) {
     const player = client.game(gameId).players.indexOf(userId);
-    applyAction(gameId, `{"type":"leave","player":${player}}`);
+    return applyAction(gameId, `{"type":"leave","player":${player}}`);
 }
 
 export function startGame(gameId, numDecks) {
-    applyAction(gameId, `{"type":"start","numDecks":${numDecks}}`);
+    return applyAction(gameId, `{"type":"start","numDecks":${numDecks}}`);
 }
 
 export function playCard(gameId, card) {
@@ -859,11 +982,45 @@ function disableButtons(gameId) {
 }
 
 function applyAction(gameId, action) {
-    fetch(`./apply_action?game_id=${gameId}`, {
+    return fetch(`./apply_action?game_id=${gameId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: action,
     });
+}
+
+async function runSetupAction(button, action, errorMessage, lockSetupUntilUpdate = false) {
+    const gameElem = button.closest(".game");
+    if (lockSetupUntilUpdate && gameElem) {
+        gameElem.setAttribute("data-setup-pending", "");
+        for (const setupButton of gameElem.querySelectorAll("button")) {
+            setupButton.disabled = true;
+        }
+    } else {
+        button.disabled = true;
+    }
+    let succeeded = false;
+    try {
+        const response = await action();
+        succeeded = response.ok;
+        if (!succeeded) {
+            alert(errorMessage);
+        }
+    } catch {
+        alert(errorMessage);
+    } finally {
+        if (lockSetupUntilUpdate && !succeeded) {
+            gameElem?.removeAttribute("data-setup-pending");
+        }
+        if ((!lockSetupUntilUpdate || !succeeded) && gameElem?.isConnected) {
+            button.disabled = false;
+            const gameId = gameElem.getAttribute("data-gameId");
+            const game = client.game(gameId);
+            if (game.phase.type === "unstarted") {
+                updateUnstartedGame(gameId, game, gameElem);
+            }
+        }
+    }
 }
 
 function signalUpdate() {
@@ -873,27 +1030,26 @@ function signalUpdate() {
 }
 
 document.getElementById("new-game").addEventListener("click", async (event) => {
-    const response = await fetch("./new_game", { method: "POST" });
-    if (response.status === 409) {
-        alert("A game is already in progress. End it before starting a new one.");
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+        const response = await fetch("./new_game", {method: "POST"});
+        if (!response.ok) {
+            alert("A new game could not be created.");
+            return;
+        }
+        const gameId = await response.json();
+        showGame(gameId, true);
+    } catch {
+        alert("A new game could not be created.");
+    } finally {
+        button.disabled = false;
     }
 });
 
 updateEmptyState();
 
-document.getElementById("end-game").addEventListener("click", async (event) => {
-    const password = prompt("Enter the password to end the game for everyone:");
-    if (password !== null) {
-        const response = await fetch("./end_game", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({password}),
-        });
-        if (response.status === 401) {
-            alert("Incorrect password.");
-        }
-    }
-});
+document.getElementById("all-games").addEventListener("click", () => showGameList(true));
 
 document.getElementById("rules").addEventListener("click", (event) => {
     alert("1. Loser must make a goat noise.\n2. No free shows.\n3. Other rules must be figured out as you play.");

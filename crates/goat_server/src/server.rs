@@ -32,12 +32,9 @@ impl Default for Server {
 }
 
 impl Server {
-    pub fn new_game(&self, seed: u64) -> Option<GameId> {
+    pub fn new_game(&self, seed: u64) -> GameId {
         let game_id = GameId(rand::random());
         let mut games = self.games.write();
-        if !games.is_empty() {
-            return None;
-        }
         games.insert(
             game_id,
             Mutex::new((ServerGame::with_seed(seed), Instant::now())),
@@ -52,23 +49,7 @@ impl Server {
             .iter()
             .cloned(),
         );
-        Some(game_id)
-    }
-
-    pub fn end_game(&self) {
-        let mut games = self.games.write();
-        let ended: Vec<GameId> = games.keys().copied().collect();
-        games.clear();
-        drop(games);
-        if !ended.is_empty() {
-            let mut users = self.users.lock();
-            broadcast(
-                &mut users,
-                ended
-                    .into_iter()
-                    .map(|game_id| Response::ForgetGame { game_id }),
-            );
-        }
+        game_id
     }
 
     pub fn change_name(&self, user_id: UserId, name: String) {

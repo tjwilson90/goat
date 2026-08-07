@@ -20,8 +20,6 @@ mod subscriber;
 #[cfg(test)]
 mod test;
 
-const END_GAME_PASSWORD: &str = "goattime455";
-
 const BOTS: [(&str, bool); 12] = [
     ("Tim", true),
     ("Simone", true),
@@ -70,53 +68,20 @@ fn new_game(
 ) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
     fn handle(state: &Server) -> impl Reply {
         let seed = rand::thread_rng().next_u64();
-        match state.new_game(seed) {
-            Some(game_id) => {
-                for &(name, auto_join) in &BOTS {
-                    if auto_join {
-                        let user_id = bot_user_id(name);
-                        if let Err(e) = state.apply_action(user_id, game_id, Action::Join { user_id }) {
-                            log::warn!("Failed to auto-join bot {}: {}", name, e);
-                        }
-                    }
+        let game_id = state.new_game(seed);
+        for &(name, auto_join) in &BOTS {
+            if auto_join {
+                let user_id = bot_user_id(name);
+                if let Err(e) = state.apply_action(user_id, game_id, Action::Join { user_id }) {
+                    log::warn!("Failed to auto-join bot {}: {}", name, e);
                 }
-                warp::reply::with_status(
-                    warp::reply::json(&game_id),
-                    warp::http::StatusCode::OK,
-                )
             }
-            None => warp::reply::with_status(
-                warp::reply::json(&"a game already exists"),
-                warp::http::StatusCode::CONFLICT,
-            ),
         }
+        warp::reply::json(&game_id)
     }
     warp::path!("new_game")
         .and(warp::post())
         .and(warp::any().map(move || state))
-        .map(handle)
-}
-
-fn end_game(
-    state: &'static Server,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone {
-    #[derive(Deserialize)]
-    struct Wrapper {
-        password: String,
-    }
-    fn handle(state: &Server, Wrapper { password }: Wrapper) -> impl Reply {
-        let status = if password == END_GAME_PASSWORD {
-            state.end_game();
-            warp::http::StatusCode::OK
-        } else {
-            warp::http::StatusCode::UNAUTHORIZED
-        };
-        warp::reply::with_status(warp::reply(), status)
-    }
-    warp::path!("end_game")
-        .and(warp::post())
-        .and(warp::any().map(move || state))
-        .and(warp::body::json())
         .map(handle)
 }
 
@@ -234,7 +199,6 @@ async fn main() {
     let app = root()
         .or(assets())
         .or(new_game(state))
-        .or(end_game(state))
         .or(change_name(state))
         .or(apply_action(state))
         .or(subscribe(state))
