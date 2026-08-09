@@ -45,7 +45,7 @@ impl<Hand: RummyHand, History: RummyHistory> RummyPhase<Hand, History> {
         if hand.is_empty() {
             self.pick_ups = 0;
         }
-        let killed = self.trick.play(lo, hi);
+        let killed = self.trick.play(player, lo, hi);
         if killed {
             self.history.kill(player, lo, hi);
             self.reset_trick();

@@ -2,8 +2,8 @@ use serde::ser::{SerializeSeq, SerializeStruct};
 use serde::{Serialize, Serializer};
 
 use goat_api::{
-    Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, Deck, PlayerIdx, Rank, RummyTrick,
-    ServerWarHand, WarPlay, WarPlayKind, WarTrick,
+    Card, Cards, ClientDeck, ClientRummyHand, ClientWarHand, Deck, PlayerIdx, Rank, RummyPlay,
+    RummyTrick, ServerWarHand, WarPlay, WarPlayKind, WarTrick,
 };
 
 use crate::OneAction;
@@ -46,12 +46,6 @@ impl<'a> Serialize for Wrapper<&'a ClientPhase> {
                 ser.serialize_field("won", &Wrapper(&*war.won))?;
                 ser.serialize_field("finished", &war.is_finished())?;
                 ser.serialize_field("currTrick", &WrapperContext(&war.trick, war.hands.len()))?;
-                match &war.prev_trick {
-                    Some(trick) => {
-                        ser.serialize_field("prevTrick", &WrapperContext(trick, war.hands.len()))?
-                    }
-                    None => ser.skip_field("prevTrick")?,
-                };
                 ser.end()
             }
             ClientPhase::Rummy(rummy) => {
@@ -287,7 +281,33 @@ impl<'a> Serialize for Wrapper<&'a RummyTrick> {
     {
         let mut ser = ser.serialize_struct("RummyTrick", 2)?;
         ser.serialize_field("numPlayers", &self.0.num_players())?;
-        ser.serialize_field("plays", self.0.plays())?;
+        ser.serialize_field("plays", &Wrapper(self.0.plays()))?;
+        ser.end()
+    }
+}
+
+impl<'a> Serialize for Wrapper<&'a [RummyPlay]> {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut ser = ser.serialize_seq(Some(self.0.len()))?;
+        for play in self.0 {
+            ser.serialize_element(&Wrapper(play))?;
+        }
+        ser.end()
+    }
+}
+
+impl<'a> Serialize for Wrapper<&'a RummyPlay> {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut ser = ser.serialize_struct("RummyPlay", 3)?;
+        ser.serialize_field("player", &self.0.player())?;
+        ser.serialize_field("lo", &self.0.lo())?;
+        ser.serialize_field("hi", &self.0.hi())?;
         ser.end()
     }
 }

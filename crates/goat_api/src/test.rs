@@ -5,8 +5,8 @@ use std::iter::FromIterator;
 
 use crate::{
     Card, Cards, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, PlayerIdx, Rank,
-    RummyPhase, RummyTrick, ServerGame, ServerPhase, ServerWarHand, Suit, WarHand, WarPhase,
-    WarPlayKind, WarTrick,
+    RummyPhase, RummyPlay, RummyTrick, ServerGame, ServerPhase, ServerWarHand, Suit, WarHand,
+    WarPhase, WarPlayKind, WarTrick,
 };
 
 macro_rules! c {
@@ -260,8 +260,11 @@ fn rummy_trick() {
     let mut t = RummyTrick::new(4);
     assert!(t.is_empty());
     assert!(t.can_play(Card::TwoClubs, Suit::Spades));
-    assert!(!t.play(Card::ThreeClubs, Card::FourClubs));
+    assert!(!t.play(PlayerIdx(0), Card::ThreeClubs, Card::FourClubs));
     assert!(!t.is_empty());
+    assert_eq!(t.plays()[0].player(), PlayerIdx(0));
+    assert_eq!(t.plays()[0].lo(), Card::ThreeClubs);
+    assert_eq!(t.plays()[0].hi(), Card::FourClubs);
     assert!(!t.can_play(Card::TwoClubs, Suit::Spades));
     assert!(!t.can_play(Card::FourClubs, Suit::Spades));
     assert!(t.can_play(Card::FiveClubs, Suit::Spades));
@@ -270,15 +273,21 @@ fn rummy_trick() {
     assert!(t.can_play(Card::FiveSpades, Suit::Spades));
     assert_eq!((Card::ThreeClubs, Card::FourClubs), t.pick_up());
     assert!(t.is_empty());
-    assert!(!t.play(Card::ThreeClubs, Card::FourClubs));
-    assert!(!t.play(Card::FiveClubs, Card::FiveClubs));
+    assert!(!t.play(PlayerIdx(1), Card::ThreeClubs, Card::FourClubs));
+    assert!(!t.play(PlayerIdx(2), Card::FiveClubs, Card::FiveClubs));
+    assert!(!t.play(PlayerIdx(3), Card::SevenClubs, Card::SevenClubs));
     assert!(!t.is_empty());
     assert_eq!((Card::ThreeClubs, Card::FiveClubs), t.pick_up());
+    assert_eq!(t.plays().len(), 1);
+    assert_eq!(t.plays()[0].player(), PlayerIdx(3));
+    assert_eq!(t.plays()[0].lo(), Card::SevenClubs);
+    assert_eq!(t.plays()[0].hi(), Card::SevenClubs);
+    assert_eq!((Card::SevenClubs, Card::SevenClubs), t.pick_up());
     assert!(t.is_empty());
-    assert!(!t.play(Card::ThreeClubs, Card::FourClubs));
-    assert!(!t.play(Card::SixClubs, Card::SixClubs));
-    assert!(!t.play(Card::FourSpades, Card::SixSpades));
-    assert!(t.play(Card::EightSpades, Card::EightSpades));
+    assert!(!t.play(PlayerIdx(0), Card::ThreeClubs, Card::FourClubs));
+    assert!(!t.play(PlayerIdx(1), Card::SixClubs, Card::SixClubs));
+    assert!(!t.play(PlayerIdx(2), Card::FourSpades, Card::SixSpades));
+    assert!(t.play(PlayerIdx(3), Card::EightSpades, Card::EightSpades));
 }
 
 #[test]
@@ -298,4 +307,5 @@ fn size_of() {
     assert_eq!(mem::size_of::<RummyPhase<Cards, ()>>(), 80);
     assert_eq!(mem::size_of::<ServerWarHand>(), 3);
     assert_eq!(mem::size_of::<ClientWarHand>(), 3);
+    assert_eq!(mem::size_of::<RummyPlay>(), 2);
 }

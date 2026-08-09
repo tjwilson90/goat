@@ -198,7 +198,6 @@ function updateWarGame(gameId, game, gameElem) {
     deckLenElem.textContent = `Deck: ${game.phase.deck} card${game.phase.deck == 1 ? "" : "s"}`;
 
     updateTableTrick(
-        gameElem.querySelector(".table-trick"),
         gameElem.querySelectorAll(".seat"),
         game,
         game.phase.currTrick
@@ -251,16 +250,16 @@ function updateRummyGame(gameId, game, gameElem) {
         gameElem.appendChild(rummyGameElement(gameId, game));
     }
 
-    const trickElem = gameElem.querySelector(".rummy-trick");
-    trickElem.innerHTML = null;
-    for (const [lo, hi] of game.phase.trick.plays) {
-        for (const card of cardsInRange(lo, hi)) {
-            trickElem.appendChild(createElement("div", {
-                classList: ["trick-card"],
-                children: [pretty(card)]
-            }));
+    const seatElements = gameElem.querySelectorAll(".seat");
+    clearSeatPlays(seatElements);
+    for (const play of game.phase.trick.plays) {
+        const seatPlays = seatElements[play.player].querySelector(".seat-plays");
+        const userId = game.players[play.player];
+        for (const card of cardsInRange(play.lo, play.hi)) {
+            seatPlays.appendChild(trickCardElement(userId, card, "rummy"));
         }
     }
+    updateSeatPlayLayouts(seatElements);
 
     const index = game.players.indexOf(window.userId);
 
@@ -456,7 +455,8 @@ function warGamePlayersElement(gameId, game, isPlayer) {
     const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
-        warGamePlayerInfoElement(userId)
+        warGamePlayerInfoElement(userId),
+        game.players.length
     ));
     const centerChildren = [createElement("div", {
         classList: ["deck-status"],
@@ -481,30 +481,39 @@ function warGamePlayersElement(gameId, game, isPlayer) {
                 })
             ]
         }));
-    } else {
-        centerChildren.push(createElement("div", {
-            classList: ["deck-actions"]
-        }));
     }
     return createElement("div", {
         classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
-        attributes: {seats: game.players.length},
         children: [
             createElement("div", {
                 classList: ["table-center"],
                 children: centerChildren
             }),
-            createElement("div", {classList: ["table-trick"]}),
             ...seats
         ]
     });
 }
 
-function gameSeatElement(seatIndex, playerInfoElement) {
+const PILE_DIRECTIONS = {
+    3: ["top", "bottom-right", "bottom-left"],
+    4: ["top", "right", "bottom", "left"],
+    5: ["top", "right", "bottom-right", "bottom-left", "left"],
+    6: ["top", "top-right", "bottom-right", "bottom", "bottom-left", "top-left"],
+    7: ["top", "top-right", "right", "bottom-right", "bottom-left", "left", "top-left"],
+    8: ["top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left", "top-left"]
+};
+
+function gameSeatElement(seatIndex, playerInfoElement, numSeats) {
     return createElement("div", {
         classList: ["seat"],
-        attributes: {seat: seatIndex},
-        children: [playerInfoElement]
+        attributes: {
+            seat: seatIndex,
+            pile: PILE_DIRECTIONS[numSeats]?.[seatIndex] ?? "top"
+        },
+        children: [
+            playerInfoElement,
+            createElement("div", {classList: ["seat-plays"]})
+        ]
     });
 }
 
@@ -634,22 +643,16 @@ function rummyGameTableElement(game) {
     const crowded = game.players.length > 8;
     const seats = game.players.map((userId, i) => gameSeatElement(
         i,
-        rummyGamePlayerInfoElement(userId)
+        rummyGamePlayerInfoElement(userId),
+        game.players.length
     ));
     return createElement("div", {
         classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
-        attributes: {seats: game.players.length},
         children: [
             createElement("div", {
                 classList: ["table-center"],
-                children: [
-                    trumpCardElement(game.phase.trump),
-                    createElement("div", {
-                        classList: ["deck-actions"]
-                    })
-                ]
+                children: [trumpCardElement(game.phase.trump)]
             }),
-            createElement("div", {classList: ["table-trick", "rummy-trick"]}),
             ...seats
         ]
     });
@@ -794,7 +797,83 @@ function createElement(tagName, options) {
     return element;
 }
 
-function updateTableTrick(trickElem, seatElements, game, trick) {
+function clearSeatPlays(seatElements) {
+    for (const seatElement of seatElements) {
+        const seatPlays = seatElement.querySelector(".seat-plays");
+        seatPlays.replaceChildren();
+    }
+}
+
+function layoutSeatPlays(seatPlays) {
+    const cards = [...seatPlays.children];
+    const count = cards.length;
+    const direction = seatPlays.closest(".seat").dataset.pile;
+    const sidePile = direction === "left" || direction === "right";
+    const cornerPile = direction.includes("-");
+    const narrowPile = sidePile || cornerPile;
+    const maxColumns = narrowPile ? 3 : 4;
+    const columns = Math.min(Math.max(count, 1), maxColumns);
+    const rows = Math.max(Math.ceil(count / columns), 1);
+    const warPile = seatPlays.closest(".game").dataset.phase === "war";
+    const rowTravel = warPile ? (sidePile ? 72 : 48) : (sidePile ? 64 : 32);
+    const extraRows = rows - 1;
+    const rowStep = extraRows > 0
+        ? `min(var(--table-card-height), ${rowTravel / extraRows}px)`
+        : "var(--table-card-height)";
+    const rowGap = extraRows > 0
+        ? `min(var(--pile-gap), ${8 / extraRows}px)`
+        : "var(--pile-gap)";
+
+    seatPlays.style.setProperty("--pile-columns", columns);
+    seatPlays.style.setProperty("--pile-row-step", rowStep);
+    seatPlays.style.setProperty("--pile-row-gap", rowGap);
+    seatPlays.style.setProperty(
+        "--pile-width",
+        `calc(${columns} * var(--table-card-width) + ${columns - 1} * var(--pile-gap))`
+    );
+    seatPlays.style.setProperty(
+        "--pile-height",
+        extraRows > 0
+            ? `calc(var(--table-card-height) + ${extraRows} * (${rowStep} + ${rowGap}))`
+            : "var(--table-card-height)"
+    );
+
+    const seatIndex = seatPlays.closest(".seat").dataset.seat;
+    for (let index = 0; index < cards.length; index++) {
+        const card = cards[index];
+        const key = `${seatIndex}:${index}:${card.dataset.card}:${card.dataset.kind}`;
+        let hash = 2166136261;
+        for (let i = 0; i < key.length; i++) {
+            hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+        }
+        const jitter = shift => (((hash >>> shift) & 0xff) / 255) * 2 - 1;
+        card.style.setProperty("--card-jitter-x", `${jitter(0).toFixed(2)}px`);
+        card.style.setProperty("--card-jitter-y", `${jitter(8).toFixed(2)}px`);
+        card.style.setProperty("--card-angle", `${(jitter(16) * 3).toFixed(2)}deg`);
+    }
+}
+
+function updateSeatPlayLayouts(seatElements) {
+    for (const seatElement of seatElements) {
+        layoutSeatPlays(seatElement.querySelector(".seat-plays"));
+    }
+}
+
+function trickCardElement(userId, card, kind) {
+    return createElement("div", {
+        classList: ["trick-card"],
+        attributes: {kind, card},
+        children: [
+            createElement("span", {
+                classList: ["trick-card-who"],
+                textContent: client.user(userId).name
+            }),
+            pretty(card)
+        ]
+    });
+}
+
+function updateTableTrick(seatElements, game, trick) {
     for (let i = 0; i < seatElements.length; i++) {
         const next = trick && (trick.winner === undefined
             ? i === trick.next
@@ -802,32 +881,21 @@ function updateTableTrick(trickElem, seatElements, game, trick) {
         seatElements[i].classList.toggle("next", !!next);
     }
 
-    trickElem.innerHTML = null;
+    clearSeatPlays(seatElements);
     if (!trick || trick.plays.length === 0) {
         return;
     }
 
     for (const play of trick.plays) {
         const userId = game.players[play.player];
-        const card = pretty(play.card);
-        card.classList.toggle("lead", play.lead);
-
-        const entry = createElement("div", {
-            classList: ["trick-card"],
-            attributes: {kind: play.kind},
-            children: [
-                createElement("span", {
-                    classList: ["trick-card-who"],
-                    textContent: client.user(userId).name
-                }),
-                card
-            ]
-        });
+        const entry = trickCardElement(userId, play.card, play.kind);
+        entry.querySelector("[data-suit]").classList.toggle("lead", play.lead);
         if (play.kind === "slough") {
             entry.title = "Sloughed";
         }
-        trickElem.appendChild(entry);
+        seatElements[play.player].querySelector(".seat-plays").appendChild(entry);
     }
+    updateSeatPlayLayouts(seatElements);
 }
 
 const RANKS = {
