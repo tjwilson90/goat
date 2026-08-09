@@ -554,33 +554,37 @@ button:disabled {
     gap: var(--space-3);
 }
 
-.trump-card {
+.trump-card,
+.trick-card {
+    position: relative;
     width: var(--table-card-width);
     height: var(--table-card-height);
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #fff;
+    min-width: var(--table-card-width);
+    min-height: var(--table-card-height);
+    flex: 0 0 var(--table-card-width);
+    display: grid;
+    place-items: center;
+    padding: 3px 2px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
-    box-shadow: 0 3px 8px rgba(15, 30, 25, .25);
+    box-shadow: var(--shadow-sm);
+    font-size: 14px;
+    line-height: normal;
+    font-weight: 700;
+    text-align: center;
+    overflow: hidden;
 }
 
 .trump-card.face-down {
+    border: 2px solid #fff;
     background:
         linear-gradient(135deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
         linear-gradient(225deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
         linear-gradient(315deg, rgba(255, 255, 255, .18) 25%, transparent 25%) 0 0 / 10px 10px,
         linear-gradient(45deg, rgba(255, 255, 255, .18) 25%, #356b9a 25%) 0 0 / 10px 10px;
     outline: 1px solid #245278;
-}
-
-.trump-card.face-up {
-    color: var(--ink);
-    background: var(--surface);
-    outline: 1px solid var(--border-strong);
-    font-size: 16px;
-    font-weight: 700;
+    box-shadow: 0 3px 8px rgba(15, 30, 25, .25);
 }
 
 .deck-actions {
@@ -827,27 +831,6 @@ button:disabled {
     align-items: baseline;
 }
 
-.trick-card {
-    position: relative;
-    width: var(--table-card-width);
-    height: var(--table-card-height);
-    min-width: var(--table-card-width);
-    min-height: var(--table-card-height);
-    flex: 0 0 var(--table-card-width);
-    display: grid;
-    place-items: center;
-    padding: 3px 2px;
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-sm);
-    font-size: 14px;
-    line-height: normal;
-    font-weight: 700;
-    text-align: center;
-    overflow: hidden;
-}
-
 .seat-plays > .trick-card {
     transform:
         translate(var(--card-jitter-x, 0), var(--card-jitter-y, 0))
@@ -855,7 +838,8 @@ button:disabled {
     transform-origin: center;
 }
 
-.trick-card > [data-suit] {
+.trick-card > [data-suit],
+.trump-card > [data-suit] {
     width: 100%;
     min-width: 0;
     display: flex;
@@ -865,7 +849,8 @@ button:disabled {
     white-space: nowrap;
 }
 
-.trick-card[data-card^="T"] > [data-suit] {
+.trick-card[data-card^="T"] > [data-suit],
+.trump-card[data-card^="T"] > [data-suit] {
     transform: scaleX(.88);
 }
 

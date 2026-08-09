@@ -932,6 +932,7 @@ function trumpCardElement(card) {
     const faceUp = card !== undefined;
     return createElement("div", {
         classList: ["trump-card", faceUp ? "face-up" : "face-down"],
+        attributes: faceUp ? {card} : {},
         children: faceUp ? [pretty(card)] : []
     });
 }
