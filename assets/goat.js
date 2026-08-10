@@ -5,6 +5,9 @@ await init();
 const client = new Client();
 window.client = client;
 
+let selectedGameId = null;
+let pendingGameFocusId = null;
+
 function getCookie(name) {
     const prefix = name + "=";
     const cookies = decodeURIComponent(document.cookie).split(";");
@@ -17,10 +20,100 @@ function getCookie(name) {
     return null;
 }
 
+function updateEmptyState() {
+    document.getElementById("empty-state").hidden = document.getElementById("game-list").children.length > 0;
+}
+
+function gameElement(gameId) {
+    return [...document.getElementById("games").children]
+        .find(element => element.getAttribute("data-gameId") === gameId);
+}
+
+function gameSummaryElementFor(gameId) {
+    return [...document.getElementById("game-list").children]
+        .find(element => element.getAttribute("data-gameSummary") === gameId);
+}
+
+function phaseLabel(game) {
+    switch (game.phase.type) {
+        case "unstarted": return "Waiting for players";
+        case "war": return "War round";
+        case "rummy": return "Rummy round";
+        case "goat": return "Complete";
+    }
+}
+
+function gameLabel(gameId) {
+    return `Game ${gameId.slice(0, 6)}`;
+}
+
+function createGameSummaryElement(gameId) {
+    return createElement("button", {
+        type: "button",
+        classList: ["game-summary"],
+        attributes: {gameSummary: gameId},
+        listeners: {click: () => showGame(gameId, true)},
+        children: [
+            createElement("span", {classList: ["game-summary-title"]}),
+            createElement("span", {classList: ["game-summary-status"]}),
+            createElement("span", {classList: ["game-summary-players"]}),
+            createElement("span", {classList: ["game-summary-arrow"], textContent: "→"})
+        ]
+    });
+}
+
+function updateGameSummary(gameId, game) {
+    let summary = gameSummaryElementFor(gameId);
+    if (!summary) {
+        summary = createGameSummaryElement(gameId);
+        document.getElementById("game-list").appendChild(summary);
+        updateEmptyState();
+    }
+    summary.querySelector(".game-summary-title").textContent = gameLabel(gameId);
+    summary.querySelector(".game-summary-status").textContent = phaseLabel(game);
+    const names = game.players.map(userId => client.user(userId).name);
+    summary.querySelector(".game-summary-players").textContent = names.length > 0
+        ? names.join(", ")
+        : "No players yet";
+}
+
+function showGame(gameId, focusHeading = false) {
+    if (focusHeading) {
+        pendingGameFocusId = gameId;
+    }
+    const activeGame = gameElement(gameId);
+    selectedGameId = gameId;
+    if (!activeGame) {
+        return;
+    }
+    document.getElementById("game-list-view").hidden = true;
+    document.getElementById("game-detail").hidden = false;
+    const heading = document.getElementById("game-detail-heading");
+    heading.textContent = gameLabel(gameId);
+    for (const game of document.getElementById("games").children) {
+        game.hidden = game !== activeGame;
+    }
+    if (pendingGameFocusId === gameId) {
+        pendingGameFocusId = null;
+        heading.focus();
+    }
+}
+
+function showGameList(focusHeading = false) {
+    selectedGameId = null;
+    pendingGameFocusId = null;
+    document.getElementById("game-detail").hidden = true;
+    document.getElementById("game-list-view").hidden = false;
+    if (focusHeading) {
+        document.getElementById("games-heading").focus();
+    }
+}
+
 export function updateGame(gameId, replay) {
-    let gameElem = document.querySelector(`[data-gameId="${gameId}"]`);
+    let gameElem = gameElement(gameId);
     if (!gameElem) {
         gameElem = unstartedGameElement(gameId);
+        gameElem.hidden = selectedGameId !== gameId;
         document.getElementById("games").appendChild(gameElem);
     }
     const game = client.game(gameId);
@@ -35,13 +128,18 @@ export function updateGame(gameId, replay) {
             updateRummyGame(gameId, game, gameElem);
             break;
         case "goat":
-            updateCompleteGame(game, gameElem, replay);
+            updateCompleteGame(gameId, game, gameElem, replay);
             break;
+    }
+    updateGameSummary(gameId, game);
+    if (selectedGameId === gameId) {
+        showGame(gameId);
     }
 }
 
 function updateUnstartedGame(gameId, game, gameElem) {
     const notPlayerIds = new Set(client.userIds());
+    const setupPending = gameElem.hasAttribute("data-setup-pending");
 
     const playersElem = gameElem.querySelector(".players");
     const newPlayerElems = document.createDocumentFragment();
@@ -52,28 +150,43 @@ function updateUnstartedGame(gameId, game, gameElem) {
     }
     playersElem.innerHTML = null;
     playersElem.appendChild(newPlayerElems);
+    for (const button of playersElem.querySelectorAll("button")) {
+        button.disabled = setupPending;
+    }
 
     const addPlayersElem = gameElem.querySelector(".add-players");
-    addPlayersElem.disabled = game.players.length >= 16;
+    const playerLimitReached = game.players.length >= 16;
     const newAddPlayerElems = [];
     for (let userId of notPlayerIds) {
-        let addPlayerElem = addPlayersElem.querySelector(`[data-userId="${userId}"]`) ?? unstartedGameAddPlayerElement(userId);
+        let addPlayerElem = addPlayersElem.querySelector(`[data-userId="${userId}"]`) ?? unstartedGameAddPlayerElement(gameId, userId);
+        addPlayerElem.disabled = playerLimitReached || setupPending;
         newAddPlayerElems.push(addPlayerElem);
     }
-    const addPlayersDefaultOption = addPlayersElem.firstChild;
-    addPlayersElem.innerHTML = null;
-    addPlayersElem.appendChild(addPlayersDefaultOption);
     newAddPlayerElems
-        .sort((a, b) => a.textContent < b.textContent ? -1 : 1)
-        .forEach(child => addPlayersElem.appendChild(child));
-    addPlayersElem.value = "";
+        .sort((a, b) => a.textContent.localeCompare(b.textContent) || a.dataset.userid.localeCompare(b.dataset.userid));
+    addPlayersElem.replaceChildren(...newAddPlayerElems);
 
-    const startGameElem = gameElem.querySelector(".start-game");
-    startGameElem.disabled = game.players.length < 3;
+    gameElem.querySelector(".player-count").textContent = `Players: ${game.players.length} / 16`;
+    const addPlayerStatus = gameElem.querySelector(".add-player-status");
+    addPlayerStatus.textContent = playerLimitReached
+        ? "Player limit reached."
+        : newAddPlayerElems.length === 0 ? "No other players available." : "";
+    addPlayerStatus.hidden = !addPlayerStatus.textContent;
+
+    const playersNeeded = Math.max(0, 3 - game.players.length);
+    for (const button of gameElem.querySelectorAll(".start-game-actions button")) {
+        button.disabled = playersNeeded > 0 || setupPending;
+    }
+    const startStatus = gameElem.querySelector(".start-game-status");
+    startStatus.textContent = playersNeeded > 0
+        ? `Add ${playersNeeded} more player${playersNeeded === 1 ? "" : "s"} to start.`
+        : "";
+    startStatus.hidden = !startStatus.textContent;
 }
 
 function updateWarGame(gameId, game, gameElem) {
     if (gameElem.dataset.phase !== "war") {
+        gameElem.removeAttribute("data-setup-pending");
         gameElem.innerHTML = null;
         gameElem.setAttribute("data-phase", "war");
         gameElem.appendChild(warGameElement(gameId, game));
@@ -84,32 +197,19 @@ function updateWarGame(gameId, game, gameElem) {
     const deckLenElem = gameElem.querySelector(".deck-len");
     deckLenElem.textContent = `Deck: ${game.phase.deck} card${game.phase.deck == 1 ? "" : "s"}`;
 
-    updateTrickElements(
-        gameElem.querySelectorAll(".current .trick-played"),
-        gameElem.querySelectorAll(".current .trick-sloughed"),
+    updateTableTrick(
+        gameElem.querySelectorAll(".seat"),
+        game,
         game.phase.currTrick
-    );
-    updateTrickElements(
-        gameElem.querySelectorAll(".previous .trick-played"),
-        gameElem.querySelectorAll(".previous .trick-sloughed"),
-        game.phase.prevTrick
     );
 
     const handElems = gameElem.querySelectorAll(".other-hand");
     const wonElems = gameElem.querySelectorAll(".won");
     for (let i = 0; i < game.players.length; i++) {
         const hand = game.phase.hands[i];
+        const handLength = hand.type == "hidden" ? hand.length : hand.cards.length;
         const handElem = handElems[i];
-        if (hand.type == "hidden") {
-            handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
-        } else if (hand.cards.length == 0) {
-            handElem.textContent = "Hand: 0 cards";
-        } else {
-            handElem.textContent = "Hand: ";
-            for (const card of hand.cards) {
-                handElem.appendChild(pretty(card.card));
-            }
-        }
+        handElem.textContent = `Hand: ${handLength} card${handLength == 1 ? "" : "s"}`;
         const won = game.phase.won[i];
         const wonElem = wonElems[i];
         wonElem.textContent = `Won: ${won} card${won == 1 ? "" : "s"}`;
@@ -129,25 +229,17 @@ function updateWarGame(gameId, game, gameElem) {
         finishTrickElem.disabled = (!game.phase.finished && game.phase.currTrick.winner === undefined)
             || (game.phase.currTrick.endMask & (1 << index)) === 0;
 
-        const playsElem = gameElem.querySelector(".my-plays");
-        const newPlaysElem = document.createDocumentFragment();
+        const handElem = gameElem.querySelector(".my-war-hand");
+        const newHandElem = document.createDocumentFragment();
         for (const card of game.phase.hands[index].cards) {
-            const cardElem = playsElem.querySelector(`[data-card="${card}"]`) ?? warCardElement(gameId, card.card, playCard);
-            cardElem.disabled = !card.playable;
-            newPlaysElem.appendChild(cardElem);
+            const cardElem = handElem.querySelector(`[data-card="${card.card}"]`)
+                ?? warHandCardElement(gameId, card.card);
+            cardElem.querySelector(".play-card").disabled = !card.playable;
+            cardElem.querySelector(".slough-card").disabled = !card.sloughable;
+            newHandElem.appendChild(cardElem);
         }
-        playsElem.innerHTML = null;
-        playsElem.appendChild(newPlaysElem);
-
-        const sloughsElem = gameElem.querySelector(".my-sloughs");
-        const newSloughsElem = document.createDocumentFragment();
-        for (const card of game.phase.hands[index].cards) {
-            const cardElem = sloughsElem.querySelector(`[data-card="${card}"]`) ?? warCardElement(gameId, card.card, slough);
-            cardElem.disabled = !card.sloughable;
-            newSloughsElem.appendChild(cardElem);
-        }
-        sloughsElem.innerHTML = null;
-        sloughsElem.appendChild(newSloughsElem);
+        handElem.innerHTML = null;
+        handElem.appendChild(newHandElem);
     }
 }
 
@@ -158,18 +250,16 @@ function updateRummyGame(gameId, game, gameElem) {
         gameElem.appendChild(rummyGameElement(gameId, game));
     }
 
-    const newTrickElem = document.createDocumentFragment();
-    newTrickElem.appendChild(document.createTextNode("Current Trick: "));
-    for (let i = 0; i < game.phase.trick.plays.length; i++) {
-        if (i != 0) {
-            newTrickElem.appendChild(document.createTextNode(", "));
+    const seatElements = gameElem.querySelectorAll(".seat");
+    clearSeatPlays(seatElements);
+    for (const play of game.phase.trick.plays) {
+        const seatPlays = seatElements[play.player].querySelector(".seat-plays");
+        const userId = game.players[play.player];
+        for (const card of cardsInRange(play.lo, play.hi)) {
+            seatPlays.appendChild(trickCardElement(userId, card, "rummy"));
         }
-        let play = game.phase.trick.plays[i];
-        appendCardRange(newTrickElem, play[0], play[1]);
     }
-    const trickElem = gameElem.querySelector(".rummy-trick");
-    trickElem.innerHTML = null;
-    trickElem.appendChild(newTrickElem);
+    updateSeatPlayLayouts(seatElements);
 
     const index = game.players.indexOf(window.userId);
 
@@ -179,18 +269,10 @@ function updateRummyGame(gameId, game, gameElem) {
     for (let i = 0; i < game.players.length; i++) {
         const hand = game.phase.hands[i];
         const handElem = handElems[i];
-        if (index >= 0 && index != i) {
-            handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
-        } else if (hand.length == 0) {
-            handElem.textContent = "Hand: 0 cards";
-        } else {
-            handElem.textContent = "Hand: ";
-            for (const card of hand.cards) {
-                handElem.appendChild(pretty(card.card));
-            }
-        }
-        handElem.parentElement.classList.toggle("next", i === game.phase.next);
-        handElem.parentElement.classList.toggle("finished", hand.length === 0);
+        handElem.textContent = `Hand: ${hand.length} card${hand.length == 1 ? "" : "s"}`;
+        const seatElem = handElem.closest(".seat");
+        seatElem.classList.toggle("next", i === game.phase.next);
+        seatElem.classList.toggle("finished", hand.length === 0);
 
         updateLastPlay(lastPlayElems[i], game.phase.history[i]);
     }
@@ -198,7 +280,7 @@ function updateRummyGame(gameId, game, gameElem) {
         const cardsElem = gameElem.querySelector(".rummy-cards");
         const newCardsElem = document.createDocumentFragment();
         for (const card of game.phase.hands[index].cards) {
-            newCardsElem.appendChild(rummyCardElement(gameId, card));
+            newCardsElem.appendChild(rummyCardElement(gameId, card, game.phase.next === index));
         }
         cardsElem.innerHTML = null;
         cardsElem.appendChild(newCardsElem);
@@ -211,48 +293,54 @@ function updateLastPlay(elem, action) {
         return;
     }
     elem.innerHTML = null;
-    elem.appendChild(createElement("span", {textContent: "Last Play: "}));
+    elem.appendChild(createElement("span", {
+        classList: ["last-play-label"],
+        textContent: "Last Play:"
+    }));
     switch (action.type) {
         case "lead":
-            elem.appendChild(createElement("span", {textContent: "Lead "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Lead", action.lo, action.hi));
             break;
         case "play":
-            elem.appendChild(createElement("span", {textContent: "Play "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Play", action.lo, action.hi));
             break;
         case "kill":
-            elem.appendChild(createElement("span", {textContent: "Kill "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Kill", action.lo, action.hi));
             break;
         case "killAndLead":
-            elem.appendChild(createElement("span", {textContent: "Kill "}));
-            appendCardRange(elem, action.killLo, action.killHi);
-            elem.appendChild(createElement("span", {textContent: ", Lead "}));
-            appendCardRange(elem, action.leadLo, action.leadHi);
+            elem.appendChild(lastPlayPart("Kill", action.killLo, action.killHi, ","));
+            elem.appendChild(lastPlayPart("Lead", action.leadLo, action.leadHi));
             break;
         case "pickUp":
-            elem.appendChild(createElement("span", {textContent: "Pick Up "}));
-            appendCardRange(elem, action.lo, action.hi);
+            elem.appendChild(lastPlayPart("Pick Up", action.lo, action.hi));
             break;
     }
 }
 
-function appendCardRange(elem, lo, hi) {
-    elem.appendChild(pretty(lo));
+function lastPlayPart(label, lo, hi, suffix = "") {
+    const children = [
+        document.createTextNode(`${label} `),
+        pretty(lo)
+    ];
     if (lo !== hi) {
-        elem.appendChild(createElement("span", {textContent: " - "}));
-        elem.appendChild(pretty(hi));
+        children.push(document.createTextNode(" – "), pretty(hi));
     }
+    if (suffix) {
+        children.push(document.createTextNode(suffix));
+    }
+    return createElement("span", {
+        classList: ["last-play-part"],
+        children
+    });
 }
 
-function updateCompleteGame(game, gameElem, replay) {
+function updateCompleteGame(gameId, game, gameElem, replay) {
     gameElem.innerHTML = null;
     gameElem.setAttribute("data-phase", "goat");
     gameElem.appendChild(document.createTextNode("Goat: "));
     const goat = game.players[game.phase.goat];
     gameElem.appendChild(nameElement(goat));
-    if (!replay && game.phase.noise !== undefined) {
+    if (!replay && selectedGameId === gameId && game.phase.noise !== undefined) {
         const noise = new Audio(`./assets/noises/goat-${game.phase.noise}.mp3`);
         noise.play();
     }
@@ -263,6 +351,9 @@ function unstartedGameElement(gameId) {
         classList: ["game"],
         attributes: {gameId: gameId, phase: "unstarted"},
         children: [
+            createElement("p", {
+                classList: ["player-count"],
+            }),
             createElement("ul", {classList: ["players", "vertical"]}),
             unstartedGameAddPlayersElement(gameId),
             unstartedGameStartGameElement(gameId)
@@ -271,57 +362,59 @@ function unstartedGameElement(gameId) {
 }
 
 function unstartedGameAddPlayersElement(gameId) {
-    return createElement("select", {
-        classList: ["add-players", "sorted-users"],
-        listeners: {
-            change: (event) => {
-                if (event.target.value) {
-                    joinGame(gameId, event.target.value);
-                }
-            }
-        },
+    return createElement("fieldset", {
+        classList: ["setup-group"],
         children: [
-            createElement("option", {
-                value: "",
-                textContent: "Add a Player"
+            createElement("legend", {textContent: "Add a player"}),
+            createElement("div", {classList: ["add-players", "sorted-users"]}),
+            createElement("p", {
+                classList: ["setup-status", "add-player-status"],
+                hidden: true
             })
         ]
     });
 }
 
 function unstartedGameStartGameElement(gameId) {
-    return createElement("select", {
-        classList: ["start-game"],
-        listeners: {change: (event) => startGame(gameId, event.target.value)},
+    return createElement("fieldset", {
+        classList: ["setup-group"],
         children: [
-            createElement("option", {
-                value: "",
-                textContent: "Start Game"
+            createElement("legend", {textContent: "Start game"}),
+            createElement("div", {
+                classList: ["start-game-actions"],
+                children: [1, 2, 3].map(numDecks => createElement("button", {
+                    type: "button",
+                    textContent: `Start with ${numDecks} deck${numDecks === 1 ? "" : "s"}`,
+                    listeners: {click: event => runSetupAction(
+                        event.currentTarget,
+                        () => startGame(gameId, numDecks),
+                        "The game could not be started.",
+                        true
+                    )}
+                }))
             }),
-            unstartedGameStartGameNumDecksElement(1),
-            unstartedGameStartGameNumDecksElement(2),
-            unstartedGameStartGameNumDecksElement(3)
+            createElement("p", {
+                classList: ["setup-status", "start-game-status"],
+            })
         ]
-    });
-}
-
-function unstartedGameStartGameNumDecksElement(numDecks) {
-    return createElement("option", {
-        value: numDecks,
-        textContent: `Use ${numDecks} deck${numDecks == 1 ? "" : "s"}`
     });
 }
 
 function unstartedGamePlayerElement(gameId, userId) {
     const user = client.user(userId);
     const element = createElement("li", {
-        attributes: {userId, userId},
+        attributes: {userId},
         classList: ["name", "horizontal"],
         children: [
-            createElement("span", {textContent: user.name}),
+            ...nameChildren(user),
             createElement("button", {
-                textContent: "X",
-                listeners: {click: (event) => leaveGame(gameId, userId)}
+                type: "button",
+                textContent: "Remove",
+                listeners: {click: event => runSetupAction(
+                    event.currentTarget,
+                    () => leaveGame(gameId, userId),
+                    `${user.name} could not be removed from the game.`
+                )}
             })
         ],
     });
@@ -330,12 +423,18 @@ function unstartedGamePlayerElement(gameId, userId) {
     return element;
 }
 
-function unstartedGameAddPlayerElement(userId) {
+function unstartedGameAddPlayerElement(gameId, userId) {
     const user = client.user(userId);
-    const element = createElement("option", {
-        attributes: {userId, userId},
-        value: userId,
-        textContent: user.name
+    const element = createElement("button", {
+        type: "button",
+        classList: ["add-player", "name"],
+        attributes: {userId},
+        children: nameChildren(user),
+        listeners: {click: event => runSetupAction(
+            event.currentTarget,
+            () => joinGame(gameId, userId),
+            `${user.name} could not be added to the game.`
+        )}
     });
     element.classList.toggle("online", user.online);
     element.classList.toggle("self", userId === window.userId);
@@ -343,24 +442,77 @@ function unstartedGameAddPlayerElement(userId) {
 }
 
 function warGameElement(gameId, game) {
+    const isPlayer = game.players.includes(window.userId);
     const element = document.createDocumentFragment();
-    element.appendChild(createElement("p", {classList: ["deck-len"]}));
-    element.appendChild(warGamePlayersElement(game));
-    if (game.players.includes(window.userId)) {
+    element.appendChild(warGamePlayersElement(gameId, game, isPlayer));
+    if (isPlayer) {
         element.appendChild(warGameActionsElement(gameId));
     }
     return element;
 }
 
-function warGamePlayersElement(game) {
+function warGamePlayersElement(gameId, game, isPlayer) {
+    const crowded = game.players.length > 8;
+    const seats = game.players.map((userId, i) => gameSeatElement(
+        i,
+        warGamePlayerInfoElement(userId),
+        game.players.length
+    ));
+    const centerChildren = [createElement("div", {
+        classList: ["deck-status"],
+        children: [
+            createElement("p", {classList: ["deck-len"]}),
+            trumpCardElement()
+        ]
+    })];
+    if (isPlayer) {
+        centerChildren.push(createElement("div", {
+            classList: ["deck-actions", "horizontal"],
+            children: [
+                createElement("button", {
+                    classList: ["play-top"],
+                    textContent: "Play Top",
+                    listeners: {click: (event) => playTop(gameId)}
+                }),
+                createElement("button", {
+                    classList: ["draw"],
+                    textContent: "Draw",
+                    listeners: {click: (event) => draw(gameId)}
+                })
+            ]
+        }));
+    }
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
         children: [
             createElement("div", {
-                children: game.players.map(userId => warGamePlayerInfoElement(userId))
+                classList: ["table-center"],
+                children: centerChildren
             }),
-            warGameTrickElement(game, "Current"),
-            warGameTrickElement(game, "Previous")
+            ...seats
+        ]
+    });
+}
+
+const PILE_DIRECTIONS = {
+    3: ["top", "bottom-right", "bottom-left"],
+    4: ["top", "right", "bottom", "left"],
+    5: ["top", "right", "bottom-right", "bottom-left", "left"],
+    6: ["top", "top-right", "bottom-right", "bottom", "bottom-left", "top-left"],
+    7: ["top", "top-right", "right", "bottom-right", "bottom-left", "left", "top-left"],
+    8: ["top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left", "top-left"]
+};
+
+function gameSeatElement(seatIndex, playerInfoElement, numSeats) {
+    return createElement("div", {
+        classList: ["seat"],
+        attributes: {
+            seat: seatIndex,
+            pile: PILE_DIRECTIONS[numSeats]?.[seatIndex] ?? "top"
+        },
+        children: [
+            playerInfoElement,
+            createElement("div", {classList: ["seat-plays"]})
         ]
     });
 }
@@ -376,80 +528,101 @@ function warGamePlayerInfoElement(userId) {
     });
 }
 
+function botBadge() {
+    return createElement("span", {
+        classList: ["bot-badge"],
+        textContent: "BOT",
+    });
+}
+
+function nameChildren(user) {
+    const children = [createElement("span", {classList: ["name-text"], textContent: user.name})];
+    if (user.bot) {
+        children.push(botBadge());
+    }
+    return children;
+}
+
+function requestNameChange() {
+    const currentName = client.user(window.userId).name;
+    const name = prompt("Change your name:", currentName);
+    if (!name || name === currentName) {
+        return;
+    }
+    document.cookie = "USER_NAME=" + name;
+    fetch("./change_name", {method: "POST"});
+}
+
+function subscriberNameElement(userId, user) {
+    const self = userId === window.userId;
+    const element = createElement("li", {
+        classList: ["name"],
+        attributes: {userId},
+        children: self ? [createElement("button", {
+            type: "button",
+            classList: ["change-name"],
+            children: nameChildren(user),
+            listeners: {click: requestNameChange}
+        })] : nameChildren(user)
+    });
+    element.classList.toggle("online", user.online);
+    element.classList.toggle("self", self);
+    return element;
+}
+
 function nameElement(userId) {
     const user = client.user(userId);
     const element = createElement("p", {
-        attributes: {userId, userId},
+        attributes: {userId},
         classList: ["name"],
-        textContent: user.name
+        children: nameChildren(user)
     });
     element.classList.toggle("online", user.online);
     element.classList.toggle("self", userId === window.userId);
     return element;
 }
 
-function warGameTrickElement(game, kind) {
+function warGameActionsElement(gameId) {
     return createElement("div", {
-        children: game.players.map(userId => warGamePlayerTrickElement(kind))
-    });
-}
-
-function warGamePlayerTrickElement(kind) {
-    return createElement("div", {
-        classList: ["trick", kind.toLowerCase()],
+        classList: ["horizontal", "war-actions"],
         children: [
-            createElement("p", {textContent: `${kind} trick:`}),
-            createElement("p", {classList: ["trick-played"]}),
-            createElement("p", {classList: ["trick-sloughed"]})
+            createElement("div", {
+                classList: ["horizontal", "war-hand-row"],
+                children: [
+                    createElement("span", {classList: ["plays-label"], textContent: "Hand: "}),
+                    createElement("div", {classList: ["my-war-hand"]})
+                ]
+            }),
+            createElement("button", {
+                classList: ["finish-trick"],
+                textContent: "Finish Trick",
+                listeners: {click: (event) => finishTrick(gameId)}
+            })
         ]
     });
 }
 
-function warGameActionsElement(gameId) {
+function warHandCardElement(gameId, card) {
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["war-hand-card"],
+        attributes: {card: card},
         children: [
             createElement("div", {
-                classList: ["vertical"],
-                children: [
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("button", {
-                                classList: ["play-top"],
-                                textContent: "Play Top",
-                                listeners: {click: (event) => playTop(gameId)}
-                            }),
-                            createElement("button", {
-                                classList: ["draw"],
-                                textContent: "Draw",
-                                listeners: {click: (event) => draw(gameId)}
-                            })
-                        ]
-                    }),
-                    createElement("button", {
-                        classList: ["finish-trick"],
-                        textContent: "Finish Trick",
-                        listeners: {click: (event) => finishTrick(gameId)}
-                    }),
-                ]
+                classList: ["war-card"],
+                children: [pretty(card)]
             }),
             createElement("div", {
-                classList: ["vertical"],
+                classList: ["war-card-actions"],
                 children: [
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("span", {classList: ["plays-label"], textContent: "Plays: "}),
-                            createElement("div", {classList: ["my-plays"]})
-                        ]
+                    createElement("button", {
+                        classList: ["war-card-action", "play-card"],
+                        textContent: "Play",
+                        listeners: {click: (event) => playCard(gameId, card)}
                     }),
-                    createElement("div", {
-                        classList: ["horizontal"],
-                        children: [
-                            createElement("span", {classList: ["plays-label"], textContent: "Sloughs: "}),
-                            createElement("div", {classList: ["my-sloughs"]})
-                        ]
+                    createElement("button", {
+                        classList: ["war-card-action", "slough-card"],
+                        textContent: "Slough",
+                        listeners: {click: (event) => slough(gameId, card)}
                     })
                 ]
             })
@@ -457,41 +630,31 @@ function warGameActionsElement(gameId) {
     });
 }
 
-function warCardElement(gameId, card, handler) {
-    return createElement("button", {
-        classList: ["war-card"],
-        attributes: {card: card},
-        children: [pretty(card)],
-        listeners: {click: (event) => handler(gameId, card)}
-    });
-}
-
 function rummyGameElement(gameId, game) {
     const element = document.createDocumentFragment();
-    element.appendChild(createElement("div", {
-        classList: ["horizontal"],
-        children: [
-            createElement("p", {
-                classList: ["trump"],
-                children: [
-                    createElement("span", {textContent: "Trump: "}),
-                    pretty(game.phase.trump)
-                ]
-            }),
-            createElement("p", {classList: ["rummy-trick"]})
-        ]
-    }));
-    element.appendChild(rummyGamePlayersElement(game));
+    element.appendChild(rummyGameTableElement(game));
     if (game.players.includes(window.userId)) {
         element.appendChild(rummyGameActionsElement(gameId));
     }
     return element;
 }
 
-function rummyGamePlayersElement(game) {
+function rummyGameTableElement(game) {
+    const crowded = game.players.length > 8;
+    const seats = game.players.map((userId, i) => gameSeatElement(
+        i,
+        rummyGamePlayerInfoElement(userId),
+        game.players.length
+    ));
     return createElement("div", {
-        classList: ["vertical"],
-        children: game.players.map(userId => rummyGamePlayerInfoElement(userId))
+        classList: ["game-table", ...(crowded ? ["crowded-table"] : [])],
+        children: [
+            createElement("div", {
+                classList: ["table-center"],
+                children: [trumpCardElement(game.phase.trump)]
+            }),
+            ...seats
+        ]
     });
 }
 
@@ -508,19 +671,20 @@ function rummyGamePlayerInfoElement(userId) {
 
 function rummyGameActionsElement(gameId) {
     return createElement("div", {
-        classList: ["horizontal"],
+        classList: ["horizontal", "rummy-actions"],
         children: [
+            createElement("span", {classList: ["plays-label"], textContent: "Hand: "}),
+            createElement("div", {classList: ["rummy-cards", "horizontal"]}),
+            createElement("button", {
+                classList: ["play-range"],
+                textContent: "Play",
+                listeners: {click: (event) => playRun(gameId)}
+            }),
             createElement("button", {
                 classList: ["pick-up"],
                 textContent: "Pick Up",
                 listeners: {click: (event) => pickUp(gameId)}
             }),
-            createElement("button", {
-                classList: ["play-range"],
-                textContent: "Play",
-                listeners: {click: (event) => playRunOne(gameId)}
-            }),
-            createElement("div", {classList: ["rummy-cards", "horizontal"]})
         ]
     });
 }
@@ -542,6 +706,9 @@ function updateRummyCards(gameId, game, index) {
 
     pickUpElem.disabled = game.phase.trick.plays.length == 0;
     const checkedElems = gameElem.querySelectorAll(".rummy-card input:checked");
+    for (const cardElem of cardsElem.children) {
+        cardElem.classList.remove("selected-run");
+    }
     if (checkedElems.length == 0) {
         playRangeElem.disabled = true;
         for (const cardElem of cardsElem.children) {
@@ -551,6 +718,7 @@ function updateRummyCards(gameId, game, index) {
     } else if (checkedElems.length == 1) {
         playRangeElem.disabled = false;
         const checkedCardElem = checkedElems[0].parentElement;
+        checkedCardElem.classList.add("selected-run");
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
             if (cardElem.dataset.card == checkedCardElem.dataset.card) {
@@ -560,17 +728,24 @@ function updateRummyCards(gameId, game, index) {
                         || !cardElem.classList.contains("canPlay");
             }
         }
-    } else {
-        playRangeElem.disabled = true;
+    } else if (checkedElems.length == 2) {
+        playRangeElem.disabled = false;
+        const selectedCardElems = [...checkedElems].map(elem => elem.parentElement);
+        const lo = selectedCardElems[0].dataset.card;
+        const hi = selectedCardElems[1].dataset.card;
+        for (const card of cardsInRange(lo, hi)) {
+            const cardElem = selectedCardElems.find(elem => elem.dataset.card == card)
+                ?? [...cardsElem.children].find(elem => elem.dataset.card == card);
+            cardElem?.classList.add("selected-run");
+        }
         for (const cardElem of cardsElem.children) {
             const checkElem = cardElem.querySelector("input");
-            checkElem.checked = false;
-            checkElem.disabled = !cardElem.classList.contains("canPlay");
+            checkElem.disabled = !checkElem.checked;
         }
     }
 }
 
-function rummyCardElement(gameId, card) {
+function rummyCardElement(gameId, card, isTurn) {
     const element = createElement("div", {
         classList: ["rummy-card", "vertical"],
         attributes: {card: card.card, runmin: card.runMin},
@@ -580,7 +755,6 @@ function rummyCardElement(gameId, card) {
                 type: "checkbox",
                 classList: ["card-select"],
                 listeners: {click: (event) => {
-                    playRunMany(gameId);
                     const game = client.game(gameId);
                     const index = game.players.indexOf(window.userId);
                     updateRummyCards(gameId, game, index);
@@ -588,7 +762,7 @@ function rummyCardElement(gameId, card) {
             })
         ]
     });
-    element.classList.toggle("canPlay", card.canPlay);
+    element.classList.toggle("canPlay", isTurn && card.canPlay);
     return element;
 }
 
@@ -623,27 +797,105 @@ function createElement(tagName, options) {
     return element;
 }
 
-function updateTrickElements(playElements, sloughElements, trick) {
-    for (const element of playElements) {
-        element.innerHTML = "Plays: ";
+function clearSeatPlays(seatElements) {
+    for (const seatElement of seatElements) {
+        const seatPlays = seatElement.querySelector(".seat-plays");
+        seatPlays.replaceChildren();
     }
-    for (const element of sloughElements) {
-        element.innerHTML = "Sloughs: ";
+}
+
+function layoutSeatPlays(seatPlays) {
+    const cards = [...seatPlays.children];
+    const count = cards.length;
+    const direction = seatPlays.closest(".seat").dataset.pile;
+    const sidePile = direction === "left" || direction === "right";
+    const cornerPile = direction.includes("-");
+    const narrowPile = sidePile || cornerPile;
+    const maxColumns = narrowPile ? 3 : 4;
+    const columns = Math.min(Math.max(count, 1), maxColumns);
+    const rows = Math.max(Math.ceil(count / columns), 1);
+    const warPile = seatPlays.closest(".game").dataset.phase === "war";
+    const rowTravel = warPile ? (sidePile ? 72 : 48) : (sidePile ? 64 : 32);
+    const extraRows = rows - 1;
+    const rowStep = extraRows > 0
+        ? `min(var(--table-card-height), ${rowTravel / extraRows}px)`
+        : "var(--table-card-height)";
+    const rowGap = extraRows > 0
+        ? `min(var(--pile-gap), ${8 / extraRows}px)`
+        : "var(--pile-gap)";
+
+    seatPlays.style.setProperty("--pile-columns", columns);
+    seatPlays.style.setProperty("--pile-row-step", rowStep);
+    seatPlays.style.setProperty("--pile-row-gap", rowGap);
+    seatPlays.style.setProperty(
+        "--pile-width",
+        `calc(${columns} * var(--table-card-width) + ${columns - 1} * var(--pile-gap))`
+    );
+    seatPlays.style.setProperty(
+        "--pile-height",
+        extraRows > 0
+            ? `calc(var(--table-card-height) + ${extraRows} * (${rowStep} + ${rowGap}))`
+            : "var(--table-card-height)"
+    );
+
+    const seatIndex = seatPlays.closest(".seat").dataset.seat;
+    for (let index = 0; index < cards.length; index++) {
+        const card = cards[index];
+        const key = `${seatIndex}:${index}:${card.dataset.card}:${card.dataset.kind}`;
+        let hash = 2166136261;
+        for (let i = 0; i < key.length; i++) {
+            hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+        }
+        const jitter = shift => (((hash >>> shift) & 0xff) / 255) * 2 - 1;
+        card.style.setProperty("--card-jitter-x", `${jitter(0).toFixed(2)}px`);
+        card.style.setProperty("--card-jitter-y", `${jitter(8).toFixed(2)}px`);
+        card.style.setProperty("--card-angle", `${(jitter(16) * 3).toFixed(2)}deg`);
     }
-    if (!trick) {
+}
+
+function updateSeatPlayLayouts(seatElements) {
+    for (const seatElement of seatElements) {
+        layoutSeatPlays(seatElement.querySelector(".seat-plays"));
+    }
+}
+
+function trickCardElement(userId, card, kind) {
+    return createElement("div", {
+        classList: ["trick-card"],
+        attributes: {kind, card},
+        children: [
+            createElement("span", {
+                classList: ["trick-card-who"],
+                textContent: client.user(userId).name
+            }),
+            pretty(card)
+        ]
+    });
+}
+
+function updateTableTrick(seatElements, game, trick) {
+    for (let i = 0; i < seatElements.length; i++) {
+        const next = trick && (trick.winner === undefined
+            ? i === trick.next
+            : (trick.endMask & (1 << i)) !== 0);
+        seatElements[i].classList.toggle("next", !!next);
+    }
+
+    clearSeatPlays(seatElements);
+    if (!trick || trick.plays.length === 0) {
         return;
     }
-    for (let i = 0; i < playElements.length; i++) {
-        const next = trick.winner === undefined ? i === trick.next : (trick.endMask & (1 << i)) !== 0;
-        playElements[i].parentElement.classList.toggle("next", next);
-    }
+
     for (const play of trick.plays) {
-        const parent = play.kind == "slough" ? sloughElements[play.player] : playElements[play.player];
-        const child = pretty(play.card);
-        child.classList.add(play.kind);
-        child.classList.toggle("lead", play.lead);
-        parent.appendChild(child);
+        const userId = game.players[play.player];
+        const entry = trickCardElement(userId, play.card, play.kind);
+        entry.querySelector("[data-suit]").classList.toggle("lead", play.lead);
+        if (play.kind === "slough") {
+            entry.title = "Sloughed";
+        }
+        seatElements[play.player].querySelector(".seat-plays").appendChild(entry);
     }
+    updateSeatPlayLayouts(seatElements);
 }
 
 const RANKS = {
@@ -669,6 +921,22 @@ const SUITS = {
     "S": "♠",
 }
 
+function cardsInRange(lo, hi) {
+    const ranks = Object.keys(RANKS);
+    const start = ranks.indexOf(lo[0]);
+    const end = ranks.indexOf(hi[0]);
+    return ranks.slice(start, end + 1).map(rank => rank + lo[1]);
+}
+
+function trumpCardElement(card) {
+    const faceUp = card !== undefined;
+    return createElement("div", {
+        classList: ["trump-card", faceUp ? "face-up" : "face-down"],
+        attributes: faceUp ? {card} : {},
+        children: faceUp ? [pretty(card)] : []
+    });
+}
+
 function pretty(card) {
     return createElement("span", {
         attributes: {suit: card[1]},
@@ -677,33 +945,45 @@ function pretty(card) {
 }
 
 export function forgetGame(gameId) {
-    const gameNodes = document.querySelectorAll(`[data-gameId="${gameId}"]`);
-    for (const gameNode of gameNodes) {
-        gameNode.remove();
+    gameElement(gameId)?.remove();
+    gameSummaryElementFor(gameId)?.remove();
+    if (selectedGameId === gameId) {
+        showGameList(true);
     }
+    updateEmptyState();
 }
 
 export function updateUser(userId, user) {
     let userNodes = document.querySelectorAll(`[data-userId="${userId}"]`);
     if (userNodes.length == 0) {
-        const userNode = createElement("li", {
-            classList: ["name"],
-            attributes: {userId, userId}
-        });
+        const userNode = subscriberNameElement(userId, user);
         document.getElementById("subscribers").appendChild(userNode);
         userNodes = [userNode];
     }
     for (const userNode of userNodes) {
         userNode.classList.toggle("online", user.online);
         userNode.classList.toggle("self", userId === window.userId);
-        const textNode = userNode.querySelector("span") ?? userNode;
-        textNode.textContent = user.name;
+        const nameText = userNode.querySelector(".name-text");
+        if (nameText) {
+            nameText.textContent = user.name;
+        } else {
+            userNode.textContent = user.name;
+        }
     }
     for (const userContainerNode of document.querySelectorAll(".sorted-users")) {
         [...userContainerNode.children]
             .filter(child => child.hasAttribute("data-userId"))
-            .sort((a, b) => a.firstChild.textContent < b.firstChild.textContent ? -1 : 1)
+            .sort((a, b) => a.textContent.localeCompare(b.textContent)
+                || a.getAttribute("data-userId").localeCompare(b.getAttribute("data-userId")))
             .forEach(child => userContainerNode.appendChild(child));
+    }
+    for (const gameElem of document.getElementById("games").children) {
+        const gameId = gameElem.getAttribute("data-gameId");
+        const game = client.game(gameId);
+        if (game.phase.type === "unstarted") {
+            updateUnstartedGame(gameId, game, gameElem);
+        }
+        updateGameSummary(gameId, game);
     }
 }
 
@@ -715,16 +995,16 @@ export function forgetUser(userId) {
 }
 
 export function joinGame(gameId, userId) {
-    applyAction(gameId, `{"type":"join","userId":"${userId}"}`);
+    return applyAction(gameId, `{"type":"join","userId":"${userId}"}`);
 }
 
 export function leaveGame(gameId, userId) {
     const player = client.game(gameId).players.indexOf(userId);
-    applyAction(gameId, `{"type":"leave","player":${player}}`);
+    return applyAction(gameId, `{"type":"leave","player":${player}}`);
 }
 
 export function startGame(gameId, numDecks) {
-    applyAction(gameId, `{"type":"start","numDecks":${numDecks}}`);
+    return applyAction(gameId, `{"type":"start","numDecks":${numDecks}}`);
 }
 
 export function playCard(gameId, card) {
@@ -747,20 +1027,12 @@ export function finishTrick(gameId) {
     applyAction(gameId, `{"type":"finishTrick"}`);
 }
 
-export function playRunOne(gameId) {
+export function playRun(gameId) {
     const checkedElems = document.querySelectorAll(`[data-gameId="${gameId}"] .rummy-card input:checked`)
-    const card = checkedElems[0].parentElement.dataset.card;
+    const lo = checkedElems[0].parentElement.dataset.card;
+    const hi = checkedElems[checkedElems.length - 1].parentElement.dataset.card;
     disableButtons(gameId);
-    applyAction(gameId, `{"type":"playRun","lo":"${card}","hi":"${card}"}`);
-}
-
-export function playRunMany(gameId) {
-    const checkedElems = document.querySelectorAll(`[data-gameId="${gameId}"] .rummy-card input:checked`)
-    if (checkedElems.length >= 2) {
-        const lo = checkedElems[0].parentElement.dataset.card;
-        const hi = checkedElems[1].parentElement.dataset.card;
-        applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
-    }
+    applyAction(gameId, `{"type":"playRun","lo":"${lo}","hi":"${hi}"}`);
 }
 
 export function pickUp(gameId) {
@@ -779,11 +1051,45 @@ function disableButtons(gameId) {
 }
 
 function applyAction(gameId, action) {
-    fetch(`./apply_action?game_id=${gameId}`, {
+    return fetch(`./apply_action?game_id=${gameId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: action,
     });
+}
+
+async function runSetupAction(button, action, errorMessage, lockSetupUntilUpdate = false) {
+    const gameElem = button.closest(".game");
+    if (lockSetupUntilUpdate && gameElem) {
+        gameElem.setAttribute("data-setup-pending", "");
+        for (const setupButton of gameElem.querySelectorAll("button")) {
+            setupButton.disabled = true;
+        }
+    } else {
+        button.disabled = true;
+    }
+    let succeeded = false;
+    try {
+        const response = await action();
+        succeeded = response.ok;
+        if (!succeeded) {
+            alert(errorMessage);
+        }
+    } catch {
+        alert(errorMessage);
+    } finally {
+        if (lockSetupUntilUpdate && !succeeded) {
+            gameElem?.removeAttribute("data-setup-pending");
+        }
+        if ((!lockSetupUntilUpdate || !succeeded) && gameElem?.isConnected) {
+            button.disabled = false;
+            const gameId = gameElem.getAttribute("data-gameId");
+            const game = client.game(gameId);
+            if (game.phase.type === "unstarted") {
+                updateUnstartedGame(gameId, game, gameElem);
+            }
+        }
+    }
 }
 
 function signalUpdate() {
@@ -792,17 +1098,27 @@ function signalUpdate() {
     }
 }
 
-document.getElementById("name").addEventListener("change", (event) => {
-    if (event.target.value) {
-        document.cookie = "USER_NAME=" + event.target.value;
-        fetch("./change_name", { method: "POST" });
-        event.target.value = "";
+document.getElementById("new-game").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+        const response = await fetch("./new_game", {method: "POST"});
+        if (!response.ok) {
+            alert("A new game could not be created.");
+            return;
+        }
+        const gameId = await response.json();
+        showGame(gameId, true);
+    } catch {
+        alert("A new game could not be created.");
+    } finally {
+        button.disabled = false;
     }
 });
 
-document.getElementById("new-game").addEventListener("click", (event) => {
-    fetch("./new_game", { method: "POST" });
-});
+updateEmptyState();
+
+document.getElementById("all-games").addEventListener("click", () => showGameList(true));
 
 document.getElementById("rules").addEventListener("click", (event) => {
     alert("1. Loser must make a goat noise.\n2. No free shows.\n3. Other rules must be figured out as you play.");

@@ -89,7 +89,8 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
             user_id: watcher,
             user: User {
                 name: "watcher".to_string(),
-                online: true
+                online: true,
+                bot: false,
             },
         }
     );
@@ -102,21 +103,24 @@ async fn test_play_top_deterministic() -> Result<(), GoatError> {
             user_id: cover,
             user: User {
                 name: "cover".to_string(),
-                online: true
+                online: true,
+                bot: false,
             },
         },
         Response::User {
             user_id: duck,
             user: User {
                 name: "duck".to_string(),
-                online: true
+                online: true,
+                bot: false,
             },
         },
         Response::User {
             user_id: top,
             user: User {
                 name: "top".to_string(),
-                online: true
+                online: true,
+                bot: false,
             },
         }
     );

@@ -200,7 +200,7 @@ pub fn rummy_random<R: Rng>(rng: &mut R, rummy: &RummyPhase) -> Action {
     let trumps = hand.in_suit(trump);
     let plays = match rummy.trick.top_card() {
         Some(card) => {
-            if rummy.trick.num_players() >= 4 && rummy.trick.plays()[0].0.suit() == trump {
+            if rummy.trick.num_players() >= 4 && rummy.trick.plays()[0].lo().suit() == trump {
                 return Action::PickUp;
             }
             let above = hand.above(card);

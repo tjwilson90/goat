@@ -1,72 +1,1201 @@
-body {
-    background-color: lightblue;
+/* ---- Design tokens ------------------------------------------------------- */
+:root {
+    --bg-100: #eaf3fb;   /* lightest — top of the page gradient */
+    --bg-300: #cfe2f4;   /* mid */
+    --bg-500: #b3d2ee;   /* deepest visible blue */
+
+    --surface: #ffffff;
+    --surface-muted: #f3f6fa;
+    --surface-sunken: #e9eff6;
+    --border: #d5e0ec;
+    --border-strong: #bccbdd;
+
+    --ink: #172533;         /* dark blue-grey text */
+    --ink-muted: #566472;
+    --ink-faint: #93a2b3;
+
+    --accent: #e0a53b;          /* warm gold */
+    --accent-hover: #c98f2a;
+    --accent-ink: #3a2c05;
+
+    --green-100: #dff4e4;
+    --green-500: #2f9e57;
+    --pink-100: #fbe3ea;
+    --pink-500: #d1477a;
+
+    --danger: #d64545;
+
+    --chrome-ink: #1d2b3a;
+
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 16px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .08);
+    --shadow: 0 4px 14px rgba(0, 0, 0, .12);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, .18);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+
+    --table-card-width: 32px;
+    --table-card-height: 44px;
+
+    --suit-club: #1f8a4c;
+    --suit-diamond: #2563eb;
+    --suit-heart: #e0245e;
+    --suit-spade: #1b2733;
 }
 
-#subscribers,.game,.info,.trick {
-    border-style: solid;
+/* ---- Base ---------------------------------------------------------------- */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg-100) 0%, var(--bg-300) 55%, var(--bg-500) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 .vertical {
     display: flex;
     flex-flow: column;
+    gap: var(--space-2);
 }
 
 .horizontal {
     display: flex;
     flex-flow: row;
+    gap: var(--space-3);
+    align-items: flex-start;
 }
 
+/* ---- Header -------------------------------------------------------------- */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-5);
+    background: rgba(255, 255, 255, .72);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.brand-logo {
+    width: 34px;
+    height: 34px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .2));
+}
+
+.brand-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--chrome-ink);
+}
+
+/* Buttons -- base */
+button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    line-height: 1.2;
+    color: var(--ink);
+    background: var(--surface);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+    transition: transform .05s ease, background .15s ease,
+                border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    background: var(--surface-muted);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+button:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+}
+
+button:disabled {
+    cursor: default;
+    opacity: .45;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+/* ---- Page body: sidebar + content --------------------------------------- */
+.app-body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--space-5);
+    padding: var(--space-5);
+    align-items: start;
+}
+
+.sidebar {
+    position: sticky;
+    top: 84px;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+}
+
+.sidebar-title {
+    margin: 0 0 var(--space-3);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+#subscribers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--space-1);
+}
+
+#subscribers .name {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--ink);
+    background: transparent;
+    transition: background .15s ease;
+}
+
+#subscribers .name.self:hover {
+    background: var(--surface-muted);
+}
+
+#subscribers .change-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    font-size: inherit;
+    font-weight: inherit;
+    text-align: left;
+}
+
+#subscribers .change-name:hover:not(:disabled) {
+    background: transparent;
+    border-color: transparent;
+}
+
+#subscribers .change-name:hover .name-text {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+#subscribers .change-name:active:not(:disabled) {
+    transform: none;
+}
+
+.content {
+    min-width: 0;
+}
+
+.games-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.games-heading h1,
+.games-heading p {
+    margin: 0;
+}
+
+.games-heading h1 {
+    font-size: 28px;
+}
+
+.games-heading h1:focus-visible,
+.game-detail-heading:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 4px;
+}
+
+.games-heading p {
+    margin-top: var(--space-1);
+    color: var(--ink-muted);
+}
+
+#empty-state {
+    margin: 0;
+    min-height: 180px;
+    padding: var(--space-5);
+    display: grid;
+    place-items: center;
+    color: var(--ink-muted);
+    text-align: center;
+    background: rgba(255, 255, 255, .65);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+#game-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: var(--space-4);
+}
+
+.game-summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "title arrow"
+        "status arrow"
+        "players arrow";
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    min-width: 0;
+    min-height: 132px;
+    padding: var(--space-4);
+    text-align: left;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.game-summary:hover:not(:disabled) {
+    border-color: var(--accent-hover);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+}
+
+.game-summary-title {
+    grid-area: title;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.game-summary-status {
+    grid-area: status;
+    color: var(--accent-ink);
+    font-weight: 600;
+}
+
+.game-summary-players {
+    grid-area: players;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-muted);
+    font-weight: 400;
+}
+
+.game-summary-arrow {
+    grid-area: arrow;
+    font-size: 24px;
+    color: var(--accent-hover);
+}
+
+#game-detail {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.game-detail-heading {
+    min-width: 0;
+    margin: 0;
+    font-size: 28px;
+    text-align: right;
+}
+
+#all-games {
+    margin: 0;
+}
+
+#games {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+/* ---- Player name states (used in sidebar + game panels) ------------------ */
+.name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    min-width: 0;
+}
+
+/* Offline players are dimmed everywhere */
 .name:not(.online) {
-    color: #888;
+    color: var(--ink-faint);
+    opacity: .8;
 }
 
+/* Your own name stands out */
 .name.self {
-    font-weight: bold;
+    font-weight: 700;
 }
 
-.next {
-    background-color: lightgreen;
+.name.online::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green-500);
+    box-shadow: 0 0 0 3px rgba(47, 158, 87, .25);
+    flex: 0 0 auto;
 }
 
-.finished {
-    background-color: lightpink;
+.name:not(.online)::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex: 0 0 auto;
 }
 
-[data-suit="C"] {
-    color: #008000;
+/* Small remove ("X") button next to a player in an unstarted game */
+.players .name button {
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--danger);
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    margin-left: auto;
 }
-[data-suit="D"] {
-    color: #0d00ff;
+
+.players .name button:hover:not(:disabled) {
+    background: var(--pink-100);
+    border-color: transparent;
 }
-[data-suit="H"] {
-    color: #ff0000;
+
+/* ---- BOT badge ---------------------------------------------------------- */
+.bot-badge {
+    flex: 0 0 auto;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    color: var(--accent-ink);
+    background: var(--accent);
+    text-transform: uppercase;
+    /* nudge to visually center against the taller name text */
+    align-self: center;
 }
-[data-suit="S"] {
-    color: #000000;
+
+#subscribers .bot-badge {
+    color: var(--accent);
+    background: rgba(224, 165, 59, .16);
+    border: 1px solid rgba(224, 165, 59, .5);
+    padding: 2px 4px;
 }
+
+/* Keep the online/offline status dot glued to the name, badge trailing it. */
+.name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- Game panel --------------------------------------------------------- */
+.game {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    container: game / inline-size;
+}
+
+/* ---- War and rummy phases: seated oval table ----------------------------- */
+/* Each .seat is positioned around an oval. Phase-specific game information
+   sits in the middle (.table-center), while player order remains unchanged. */
+.game[data-phase="war"],
+.game[data-phase="rummy"] {
+    /* Light blue surround so the white table reads as a table on a surface,
+       matching the app's blue background instead of a white-on-white block. */
+    background:
+        radial-gradient(120% 120% at 50% 40%, var(--bg-100) 0%, var(--bg-300) 55%, var(--bg-500) 100%);
+    border-color: var(--border);
+    padding: var(--space-4);
+}
+
+/* The .game-table is a transparent positioning canvas. The actual (smaller)
+   white table is drawn centered via ::before, so player seats can sit OUTSIDE
+   it around the edge, like people seated around a real table. */
+.game-table {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: calc(100dvh - 300px);
+    min-height: 360px;
+    margin: 0 auto;
+    background: none;
+}
+
+/* The white rounded-rectangle table top, sized smaller and centered. */
+.game-table::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 46%;
+    height: 54%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, #ffffff 0%, #f2f4f6 100%);
+    border-radius: 40px;
+    box-shadow:
+        0 18px 40px rgba(15, 30, 25, .18),
+        inset 0 1px 0 rgba(255, 255, 255, .9),
+        inset 0 0 0 2px rgba(22, 36, 31, .06);
+    pointer-events: none;
+}
+
+.table-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.table-center .deck-len {
+    margin: 0;
+    min-width: 120px;
+    text-align: center;
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 16px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+}
+
+.deck-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+}
+
+.trump-card,
+.trick-card {
+    position: relative;
+    width: var(--table-card-width);
+    height: var(--table-card-height);
+    min-width: var(--table-card-width);
+    min-height: var(--table-card-height);
+    flex: 0 0 var(--table-card-width);
+    display: grid;
+    place-items: center;
+    padding: 3px 2px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    font-size: 14px;
+    line-height: normal;
+    font-weight: 700;
+    text-align: center;
+    overflow: hidden;
+}
+
+.trump-card.face-down {
+    border: 2px solid #fff;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
+        linear-gradient(225deg, rgba(255, 255, 255, .18) 25%, transparent 25%) -5px 0 / 10px 10px,
+        linear-gradient(315deg, rgba(255, 255, 255, .18) 25%, transparent 25%) 0 0 / 10px 10px,
+        linear-gradient(45deg, rgba(255, 255, 255, .18) 25%, #356b9a 25%) 0 0 / 10px 10px;
+    outline: 1px solid #245278;
+    box-shadow: 0 3px 8px rgba(15, 30, 25, .25);
+}
+
+.deck-actions {
+    min-height: 34px;
+    gap: var(--space-2);
+    justify-content: center;
+}
+
+.deck-actions button {
+    font-size: 14px;
+}
+
+/* Each seat is a full-table wrapper. Player panels and played-card piles use
+   matching compass points, so every pile remains visibly tied to its player. */
+.seat {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.seat > .info {
+    position: absolute;
+    left: var(--x, 50%);
+    top: var(--y, 50%);
+    transform: translate(-50%, -50%);
+    width: 168px;
+    z-index: 2;
+    pointer-events: auto;
+}
+
+.seat-plays {
+    --pile-columns: 3;
+    --pile-gap: 2px;
+    --pile-row-gap: var(--pile-gap);
+    --pile-row-step: var(--table-card-height);
+    --pile-width: calc(3 * var(--table-card-width));
+    --pile-height: var(--table-card-height);
+    position: absolute;
+    left: var(--pile-left, 50%);
+    top: var(--pile-top, 50%);
+    transform: translate(var(--pile-x, -50%), var(--pile-y, -50%));
+    z-index: 2;
+    width: var(--pile-width);
+    height: var(--pile-height);
+    display: grid;
+    grid-template-columns: repeat(var(--pile-columns), var(--table-card-width));
+    grid-auto-rows: var(--pile-row-step);
+    align-content: start;
+    justify-content: start;
+    column-gap: var(--pile-gap);
+    row-gap: var(--pile-row-gap);
+    padding: 0;
+    overflow: visible;
+    pointer-events: auto;
+}
+
+.game-table .seat .seat-plays:empty {
+    display: none;
+}
+
+/* Player panels sit outside the table; their corresponding piles occupy the
+   matching compass cell just inside the original 46% by 54% tabletop. */
+.seat[data-pile="top-left"] {
+    --x: 20%; --y: 9%; --pile-left: 32%; --pile-top: 25.5%; --pile-x: 0%; --pile-y: 0%;
+}
+.seat[data-pile="top"] {
+    --x: 50%; --y: 9%; --pile-left: 50%; --pile-top: 25.5%; --pile-x: -50%; --pile-y: 0%;
+}
+.seat[data-pile="top-right"] {
+    --x: 80%; --y: 9%; --pile-left: 68%; --pile-top: 25.5%; --pile-x: -100%; --pile-y: 0%;
+}
+.seat[data-pile="right"] {
+    --x: 90%; --y: 50%; --pile-left: 72%; --pile-top: 50%; --pile-x: -100%; --pile-y: -50%;
+}
+.seat[data-pile="bottom-right"] {
+    --x: 80%; --y: 91%; --pile-left: 68%; --pile-top: 74.5%; --pile-x: -100%; --pile-y: -100%;
+}
+.seat[data-pile="bottom"] {
+    --x: 50%; --y: 91%; --pile-left: 50%; --pile-top: 74.5%; --pile-x: -50%; --pile-y: -100%;
+}
+.seat[data-pile="bottom-left"] {
+    --x: 20%; --y: 91%; --pile-left: 32%; --pile-top: 74.5%; --pile-x: 0%; --pile-y: -100%;
+}
+.seat[data-pile="left"] {
+    --x: 10%; --y: 50%; --pile-left: 28%; --pile-top: 50%; --pile-x: 0%; --pile-y: -50%;
+}
+
+/* Nine or more fixed-width seats do not fit reliably around the oval. Keep
+   each play pile with its player in a readable grid instead. */
+.game-table.crowded-table {
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+    gap: var(--space-3);
+    align-items: stretch;
+}
+
+.game-table.crowded-table::before {
+    display: none;
+}
+
+.game-table.crowded-table .table-center {
+    position: static;
+    grid-column: 1 / -1;
+    transform: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: auto;
+}
+
+.game-table.crowded-table .seat {
+    position: static;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: auto;
+}
+
+.game-table.crowded-table .seat > .info,
+.game-table.crowded-table .seat-plays {
+    position: static;
+    width: 100%;
+    transform: none;
+}
+
+.game-table.crowded-table .seat-plays {
+    height: auto;
+    padding: var(--space-1);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 5px;
+    overflow: visible;
+}
+
+.game-table.crowded-table .seat.next .info {
+    transform: none;
+}
+
+/* The oval needs enough horizontal space for its fixed-width seats. Switch
+   every player count to the non-overlapping grid when its game gets narrow. */
+@container game (max-width: 860px) {
+    .game-table {
+        aspect-ratio: auto;
+        max-height: none;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+        gap: var(--space-3);
+        align-items: stretch;
+    }
+
+    .game-table::before {
+        display: none;
+    }
+
+    .game-table .table-center {
+        position: static;
+        grid-column: 1 / -1;
+        transform: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        z-index: auto;
+    }
+
+    .game-table .seat {
+        position: static;
+        width: auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        pointer-events: auto;
+    }
+
+    .game-table .seat > .info,
+    .game-table .seat .seat-plays {
+        position: static;
+        width: 100%;
+        transform: none;
+    }
+
+    .game-table .seat-plays {
+        height: auto;
+        padding: var(--space-1);
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 5px;
+        overflow: visible;
+    }
+
+    .game-table .seat.next .info {
+        transform: none;
+    }
+}
+
+.seat .info {
+    min-width: 0;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    /* Lift the seat off the white tabletop with a defined shadow. */
+    box-shadow: 0 6px 16px rgba(15, 30, 25, .16);
+}
+
+.seat .info p {
+    margin: 0;
+}
+
+.seat .info .name {
+    font-size: 14px;
+}
+
+.seat .info .other-hand,
+.seat .info .won,
+.seat .info .last-play {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+}
+
+.last-play-label,
+.last-play-part {
+    white-space: nowrap;
+}
+
+.last-play-part {
+    display: inline-flex;
+    align-items: baseline;
+}
+
+.seat-plays > .trick-card {
+    transform:
+        translate(var(--card-jitter-x, 0), var(--card-jitter-y, 0))
+        rotate(var(--card-angle, 0deg));
+    transform-origin: center;
+}
+
+.trick-card > [data-suit],
+.trump-card > [data-suit] {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.trick-card[data-card^="T"] > [data-suit],
+.trump-card[data-card^="T"] > [data-suit] {
+    transform: scaleX(.88);
+}
+
+.trick-card-who {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.trick-card[data-kind="slough"] {
+    background: var(--surface-muted);
+    border-style: dashed;
+    font-style: italic;
+    opacity: .7;
+}
+
+/* Unstarted game setup */
+.player-count {
+    margin: 0;
+    color: var(--ink-muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.players {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--space-1);
+}
+
+.players .name {
+    padding: 8px 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.setup-group {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.setup-group legend {
+    margin-bottom: var(--space-2);
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink-muted);
+}
+
+.add-players,
+.start-game-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: var(--space-2);
+}
+
+.add-player,
+.start-game-actions button {
+    min-width: 0;
+    min-height: 44px;
+}
+
+.add-player {
+    justify-content: flex-start;
+    overflow: hidden;
+    text-align: left;
+}
+
+.add-player .name-text {
+    flex: 1 1 auto;
+}
+
+.setup-status {
+    margin: var(--space-2) 0 0;
+    color: var(--ink-muted);
+    font-size: 13px;
+}
+
+@container game (max-width: 420px) {
+    .add-players,
+    .start-game-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+.seat.finished .info {
+    background: var(--pink-100);
+    border-color: var(--pink-500);
+}
+
+.seat.next .info {
+    z-index: 4; /* lift above neighbouring seats while enlarged */
+    border-color: var(--accent);
+    transform: translate(-50%, -50%) scale(1.06);
+    animation: turn-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes turn-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 3px var(--accent),
+            0 0 14px 2px rgba(224, 165, 59, .55),
+            0 10px 26px rgba(0, 0, 0, .32);
+    }
+    50% {
+        box-shadow:
+            0 0 0 4px var(--accent),
+            0 0 26px 8px rgba(224, 165, 59, .85),
+            0 10px 26px rgba(0, 0, 0, .32);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .seat.next .info {
+        animation: none;
+        box-shadow:
+            0 0 0 4px var(--accent),
+            0 0 22px 6px rgba(224, 165, 59, .7),
+            0 10px 26px rgba(0, 0, 0, .32);
+    }
+}
+
+/* ---- Action rows --------------------------------------------------------- */
+.plays-label {
+    min-width: 64px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    align-self: center;
+}
+
+.my-war-hand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-height: 76px;
+    padding: var(--space-2);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-sm);
+    width: fit-content;
+    max-width: 100%;
+}
+
+/* ---- Playing cards ------------------------------------------------------- */
+/* Suit colors (spans carry data-suit) */
+[data-suit="C"] { color: var(--suit-club); }
+[data-suit="D"] { color: var(--suit-diamond); }
+[data-suit="H"] { color: var(--suit-heart); }
+[data-suit="S"] { color: var(--suit-spade); }
+
 span[data-suit] {
     margin: 2px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 
-.plays-label {
-    min-width: 60px;
+/* War hand cards expose both actions without duplicating the card face. */
+.war-hand-card {
+    min-width: 76px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
 }
 
-.lead.playTop {
+.war-card {
+    padding: 9px 6px 7px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.war-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--border);
+}
+
+.war-card-action {
+    min-width: 0;
+    padding: 5px 6px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 11px;
+}
+
+.war-card-action:focus-visible {
+    outline-offset: -3px;
+}
+
+.war-card-action + .war-card-action {
+    border-left: 1px solid var(--border);
+}
+
+.war-card-action.play-card:not(:disabled) {
+    color: var(--accent-ink);
+    background: #fff6df;
+}
+
+.war-card-action.slough-card:not(:disabled) {
+    color: var(--ink-muted);
+    background: var(--surface-muted);
+}
+
+.rummy-card {
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-1);
+    min-width: 44px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    font-size: 15px;
+    transition: transform .1s ease, box-shadow .15s ease,
+                border-color .15s ease, opacity .15s ease;
+    opacity: .55;
+}
+
+/* Cards that are legal to play are lifted and full-opacity */
+.rummy-card.canPlay {
+    opacity: 1;
+    border-color: var(--accent);
+}
+
+.rummy-card.canPlay:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.rummy-card.selected-run {
+    opacity: 1;
+    background: var(--green-100);
+    border-color: var(--green-500);
+    box-shadow: 0 0 0 2px rgba(47, 158, 87, .25), var(--shadow-sm);
+}
+
+.rummy-cards {
+    flex: 0 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    align-items: flex-end;
+}
+
+.rummy-actions,
+.war-actions {
+    align-items: center;
+}
+
+.rummy-actions {
+    flex-wrap: wrap;
+}
+
+.war-hand-row {
+    align-items: center;
+    flex: none;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.card-select {
+    height: 18px;
+    width: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.card-select:disabled {
+    cursor: default;
+}
+
+.trick-card[data-kind="playTop"] [data-suit].lead {
     text-decoration: underline overline;
 }
+
 .lead {
     text-decoration: underline;
+    text-underline-offset: 4px;
 }
-.playTop {
+
+.trick-card[data-kind="playTop"] [data-suit] {
     text-decoration: overline;
 }
 
-.info,.trick {
-    height: 115px;
-    padding: 0 5px 0 5px;
+.game[data-phase="goat"] {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(180deg, #fff, var(--surface-muted));
 }
-.card-select {
-    height: 20px;
-    width: 20px;
+
+.game[data-phase="goat"] .name {
+    font-size: 20px;
+}
+
+@media (max-width: 860px) {
+    .app-body {
+        grid-template-columns: 1fr;
+    }
+    .sidebar {
+        position: static;
+    }
+}
+
+@media (max-width: 560px) {
+    .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+    }
+    #rules {
+        align-self: flex-start;
+    }
+    .games-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .games-heading #new-game {
+        align-self: flex-start;
+    }
+    .rummy-actions,
+    .war-actions,
+    .war-hand-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .rummy-cards {
+        flex: none;
+        width: 100%;
+    }
+    .plays-label {
+        align-self: flex-start;
+    }
 }

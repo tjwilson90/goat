@@ -18,6 +18,7 @@ pub struct Server {
 
 struct ServerUser {
     name: String,
+    bot: bool,
     subs: SmallVec<[Subscriber; 1]>,
 }
 
@@ -58,7 +59,7 @@ impl Server {
                 let user = e.into_mut();
                 if user.name != name {
                     user.name = name.clone();
-                    Some(!user.subs.is_empty())
+                    Some((!user.subs.is_empty(), user.bot))
                 } else {
                     None
                 }
@@ -66,17 +67,18 @@ impl Server {
             Entry::Vacant(e) => {
                 e.insert(ServerUser {
                     name: name.clone(),
+                    bot: false,
                     subs: SmallVec::new(),
                 });
-                Some(false)
+                Some((false, false))
             }
         };
-        if let Some(online) = result {
+        if let Some((online, bot)) = result {
             broadcast(
                 &mut users,
                 [Response::User {
                     user_id,
-                    user: User { name, online },
+                    user: User { name, online, bot },
                 }]
                 .iter()
                 .cloned(),
@@ -111,6 +113,19 @@ impl Server {
     }
 
     pub fn subscribe(&self, user_id: UserId, name: String) -> UnboundedReceiver<Response> {
+        self.subscribe_inner(user_id, name, false)
+    }
+
+    pub fn subscribe_bot(&self, user_id: UserId, name: String) -> UnboundedReceiver<Response> {
+        self.subscribe_inner(user_id, name, true)
+    }
+
+    fn subscribe_inner(
+        &self,
+        user_id: UserId,
+        name: String,
+        bot: bool,
+    ) -> UnboundedReceiver<Response> {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut sub = Subscriber::new(tx);
 
@@ -121,21 +136,29 @@ impl Server {
                 user: User {
                     name: user.name.clone(),
                     online: !user.subs.is_empty(),
+                    bot: user.bot,
                 },
             });
         }
         let user = users.entry(user_id).or_insert_with(|| ServerUser {
             name: String::new(),
+            bot,
             subs: SmallVec::new(),
         });
+        user.bot |= bot;
         user.subs.push(sub.clone());
         if name != user.name || user.subs.len() == 1 {
             user.name = name.clone();
+            let bot = user.bot;
             broadcast(
                 &mut users,
                 [Response::User {
                     user_id,
-                    user: User { name, online: true },
+                    user: User {
+                        name,
+                        online: true,
+                        bot,
+                    },
                 }]
                 .iter()
                 .cloned(),
@@ -238,6 +261,7 @@ fn broadcast(
                 user: User {
                     name: user.name.clone(),
                     online: false,
+                    bot: user.bot,
                 },
             });
         }
@@ -276,6 +300,7 @@ fn broadcast_events(
                 user: User {
                     name: user.name.clone(),
                     online: false,
+                    bot: user.bot,
                 },
             });
         }

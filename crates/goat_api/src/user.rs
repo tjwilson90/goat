@@ -4,4 +4,5 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     pub name: String,
     pub online: bool,
+    pub bot: bool,
 }

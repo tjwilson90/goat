@@ -180,16 +180,16 @@ fn client_apply_benchmark(c: &mut Criterion) {
 fn rummy_trick_benchmark(c: &mut Criterion) {
     fn disconnected() -> RummyTrick {
         let mut trick = RummyTrick::new(4);
-        trick.play(Card::FourClubs, Card::SixClubs);
-        trick.play(Card::AceClubs, Card::AceClubs);
-        trick.play(Card::ThreeDiamonds, Card::ThreeDiamonds);
+        trick.play(PlayerIdx(0), Card::FourClubs, Card::SixClubs);
+        trick.play(PlayerIdx(1), Card::AceClubs, Card::AceClubs);
+        trick.play(PlayerIdx(2), Card::ThreeDiamonds, Card::ThreeDiamonds);
         trick
     }
     fn connected() -> RummyTrick {
         let mut trick = RummyTrick::new(4);
-        trick.play(Card::FourClubs, Card::SixClubs);
-        trick.play(Card::SevenClubs, Card::SevenClubs);
-        trick.play(Card::EightClubs, Card::EightClubs);
+        trick.play(PlayerIdx(0), Card::FourClubs, Card::SixClubs);
+        trick.play(PlayerIdx(1), Card::SevenClubs, Card::SevenClubs);
+        trick.play(PlayerIdx(2), Card::EightClubs, Card::EightClubs);
         trick
     }
     c.bench_function("RummyTrick::len", |b| {
@@ -240,7 +240,7 @@ fn rummy_trick_benchmark(c: &mut Criterion) {
     c.bench_function("RummyTrick::play", |b| {
         b.iter_batched(
             disconnected,
-            |mut trick| trick.play(Card::AceDiamonds, Card::AceDiamonds),
+            |mut trick| trick.play(PlayerIdx(3), Card::AceDiamonds, Card::AceDiamonds),
             BatchSize::SmallInput,
         )
     });

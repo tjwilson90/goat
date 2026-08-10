@@ -20,6 +20,26 @@ mod subscriber;
 #[cfg(test)]
 mod test;
 
+const BOTS: [(&str, bool); 12] = [
+    ("Tim", true),
+    ("Simone", true),
+    ("Stephen", true),
+    ("Alice", false),
+    ("Bob", false),
+    ("Carla", false),
+    ("Dimitri", false),
+    ("Eric", false),
+    ("Felicia", false),
+    ("George", false),
+    ("Hannah", false),
+    ("Varun", false),
+];
+
+fn bot_user_id(name: &str) -> UserId {
+    let hash = Sha256::digest(name.as_bytes());
+    UserId(RandId::from_hash(&hash))
+}
+
 fn user_id() -> impl Filter<Extract = (UserId,), Error = Rejection> + Clone {
     warp::cookie("USER_SECRET").map(|id: String| {
         let hash = Sha256::digest(id.as_bytes());
@@ -49,6 +69,14 @@ fn new_game(
     fn handle(state: &Server) -> impl Reply {
         let seed = rand::thread_rng().next_u64();
         let game_id = state.new_game(seed);
+        for &(name, auto_join) in &BOTS {
+            if auto_join {
+                let user_id = bot_user_id(name);
+                if let Err(e) = state.apply_action(user_id, game_id, Action::Join { user_id }) {
+                    log::warn!("Failed to auto-join bot {}: {}", name, e);
+                }
+            }
+        }
         warp::reply::json(&game_id)
     }
     warp::path!("new_game")
@@ -123,9 +151,8 @@ fn subscribe(
 
 fn run_bot<S: Strategy>(state: &'static Server, name: String, strategy: S) {
     tokio::spawn(async move {
-        let hash = Sha256::digest(name.as_bytes());
-        let user_id = UserId(RandId::from_hash(&hash));
-        let rx = state.subscribe(user_id, name);
+        let user_id = bot_user_id(&name);
+        let rx = state.subscribe_bot(user_id, name);
         let tx = move |user_id, game_id, action| state.apply_action(user_id, game_id, action);
         let mut bot = Bot::new(user_id, rx, tx, strategy, |action| match action {
             Action::Slough { .. } | Action::Goat { .. } => Duration::from_millis(750),
@@ -165,14 +192,9 @@ async fn main() {
         }
     });
 
-    run_bot(state, "Alice (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Bob (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Carla (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Dimitri (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Eric (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Felicia (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "George (bot)".to_string(), AdaptSimulate);
-    run_bot(state, "Hannah (bot)".to_string(), AdaptSimulate);
+    for &(name, _) in &BOTS {
+        run_bot(state, name.to_string(), AdaptSimulate);
+    }
 
     let app = root()
         .or(assets())
