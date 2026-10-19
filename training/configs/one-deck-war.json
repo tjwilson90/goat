@@ -1,0 +1,6 @@
+{
+  "samples": 64,
+  "max_rollouts": 512,
+  "max_steps": 4096,
+  "min_improvement": 0.1
+}

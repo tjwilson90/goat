@@ -20,9 +20,9 @@ pub struct Bot<Tx, S> {
 }
 
 impl<
-        Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError> + Clone + Send + Sync + 'static,
-        S: Strategy,
-    > Bot<Tx, S>
+    Tx: Fn(UserId, GameId, Action) -> Result<(), GoatError> + Clone + Send + Sync + 'static,
+    S: Strategy,
+> Bot<Tx, S>
 {
     pub fn new(
         user_id: UserId,
@@ -85,7 +85,15 @@ impl<
         let idx = PlayerIdx(idx as u8);
         match &game.phase {
             ClientPhase::Unstarted => None,
-            ClientPhase::War(war) => self.strategy.war(idx, war),
+            ClientPhase::War(war) => {
+                let (tx, rx) = tokio::sync::oneshot::channel();
+                let strategy = self.strategy.clone();
+                let war = war.clone();
+                rayon::spawn(move || {
+                    let _ = tx.send(strategy.war(idx, &war));
+                });
+                rx.await.ok().flatten()
+            }
             ClientPhase::Rummy(rummy) => {
                 if rummy.next == idx {
                     let (tx, rx) = tokio::sync::oneshot::channel();

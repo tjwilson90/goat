@@ -251,18 +251,22 @@ fn rummy_phase_benchmark(c: &mut Criterion) {
         let mut phase = RummyPhase::new(
             Box::new([
                 ClientRummyHand {
+                    public: Cards::NONE,
                     known: "AKKQQJJTT998877S KQJH KQJD AKC".parse().unwrap(),
                     unknown: 2,
                 },
                 ClientRummyHand {
+                    public: Cards::NONE,
                     known: "AS KQJ9854D AK87652C".parse().unwrap(),
                     unknown: 4,
                 },
                 ClientRummyHand {
+                    public: Cards::NONE,
                     known: "6S ATH TTD JJC".parse().unwrap(),
                     unknown: 0,
                 },
                 ClientRummyHand {
+                    public: Cards::NONE,
                     known: "4332S AA42D".parse().unwrap(),
                     unknown: 0,
                 },

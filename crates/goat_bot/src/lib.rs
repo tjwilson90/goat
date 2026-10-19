@@ -5,6 +5,12 @@ pub use cover_simple::*;
 pub use duck_simple::*;
 pub use play_top_simple::*;
 pub use strategy::*;
+pub mod learned;
+pub mod rummy_advanced;
+pub mod rummy_features;
+pub mod selected;
+pub use selected::Selected;
+pub mod war_advanced;
 
 mod adapt_simple;
 mod adapt_simulate;

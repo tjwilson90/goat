@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "goat-training"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["numpy>=2,<3", "torch>=2.5,<3"]
+
+[tool.maturin]
+manifest-path = "../crates/goat_training/Cargo.toml"
+features = ["python"]

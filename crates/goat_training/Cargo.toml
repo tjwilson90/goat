@@ -1,0 +1,19 @@
+[package]
+name = "goat_training"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+python = ["dep:pyo3", "pyo3/extension-module"]
+
+[dependencies]
+goat_api = { path = "../goat_api" }
+goat_bot = { path = "../goat_bot" }
+rand = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+pyo3 = { version = "0.27", optional = true }

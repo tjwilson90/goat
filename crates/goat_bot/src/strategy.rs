@@ -2,8 +2,8 @@ use goat_api::{
     Action, Cards, ClientDeck, ClientGame, ClientPhase, ClientRummyHand, ClientWarHand, Deck,
     Event, PlayerIdx, Rank, RummyHand, Suit, WarHand,
 };
-use rand::seq::SliceRandom;
 use rand::Rng;
+use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -251,22 +251,7 @@ pub fn rummy_random<R: Rng>(rng: &mut R, rummy: &RummyPhase) -> Action {
 }
 
 pub fn rummy_simulate(rummy: &RummyPhase) -> Action {
-    let mut unknown = Cards::ONE_DECK * 3;
-    let mut count = 1 + rummy.history.len();
-    unknown -= rummy.trump;
-    unknown -= rummy.history;
-    for hand in rummy.hands.iter() {
-        unknown -= hand.known;
-        count += hand.len();
-    }
-    if count % 52 != 0 {
-        panic!("unexpected state: {:?}", rummy);
-    }
-    if count == 52 {
-        unknown -= Cards::ONE_DECK * 2;
-    } else if count == 104 {
-        unknown -= Cards::ONE_DECK;
-    }
+    let unknown = rummy_unknown(rummy);
     let start = Instant::now();
     let mut simulations = HashMap::new();
     while start.elapsed() < Duration::from_secs(3) {
@@ -287,6 +272,52 @@ pub fn rummy_simulate(rummy: &RummyPhase) -> Action {
         })
         .map(|(action, _)| action)
         .unwrap()
+}
+
+/// The existing search algorithm with reproducible randomness and a rollout
+/// count budget. This is a distinct benchmark from the three-second bot.
+pub fn rummy_simulate_seeded<R: Rng>(rng: &mut R, rummy: &RummyPhase, budget: usize) -> Action {
+    assert!(budget > 0);
+    let unknown = rummy_unknown(rummy);
+    let mut simulations: Vec<(Action, u64, u64)> = Vec::new();
+    for _ in 0..budget {
+        let (action, goat) = simulate_once(rng, rummy.clone(), unknown);
+        let index = simulations
+            .iter()
+            .position(|(a, _, _)| *a == action)
+            .unwrap_or_else(|| {
+                simulations.push((action, 0, 0));
+                simulations.len() - 1
+            });
+        simulations[index].1 += (goat == rummy.next) as u64;
+        simulations[index].2 += 1;
+    }
+    // Stable first-observed tie breaking avoids randomized HashMap iteration.
+    simulations
+        .into_iter()
+        .min_by(|a, b| (a.1 * b.2).cmp(&(b.1 * a.2)))
+        .unwrap()
+        .0
+}
+
+fn rummy_unknown(rummy: &RummyPhase) -> Cards {
+    let mut unknown = Cards::ONE_DECK * 3;
+    let mut count = 1 + rummy.history.len();
+    unknown -= rummy.trump;
+    unknown -= rummy.history;
+    for hand in rummy.hands.iter() {
+        unknown -= hand.known;
+        count += hand.len();
+    }
+    if count % 52 != 0 {
+        panic!("unexpected state: {:?}", rummy);
+    }
+    if count == 52 {
+        unknown -= Cards::ONE_DECK * 2;
+    } else if count == 104 {
+        unknown -= Cards::ONE_DECK;
+    }
+    unknown
 }
 
 pub fn simulate_once<R: Rng>(

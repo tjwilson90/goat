@@ -270,3 +270,37 @@ async fn test_bots() -> Result<(), GoatError> {
     log::info!("Goats: {:?}", goat_count);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_default_selected_strategy_in_async_bot_runtime() -> Result<(), GoatError> {
+    let server = Arc::new(Server::default());
+    let watcher = UserId(rand::random());
+    let mut rx = server.subscribe(watcher, "watcher".into());
+    let strategy = goat_bot::Selected::default();
+    let bots: Vec<_> = (0..3)
+        .map(|seat| run_bot(server.clone(), format!("selected-{seat}"), strategy.clone()))
+        .collect();
+    let mut client: Client<(), (), ()> = Client::new(());
+    for seed in 0..4 {
+        let game_id = server.new_game(seed);
+        for &user_id in &bots {
+            server.apply_action(watcher, game_id, Action::Join { user_id })?;
+        }
+        server.apply_action(watcher, game_id, Action::Start { num_decks: 1 })?;
+        timeout(Duration::from_secs(10), async {
+            loop {
+                client.apply(rx.recv().await.unwrap()).unwrap();
+                if matches!(
+                    client.games.get(&game_id).map(|g| &g.phase),
+                    Some(ClientPhase::Goat(_))
+                ) {
+                    break;
+                }
+            }
+        })
+        .await
+        .expect("selected bot stalled in the asynchronous runtime");
+        server.forget_old_state(Duration::ZERO, Duration::ZERO, Duration::ZERO);
+    }
+    Ok(())
+}

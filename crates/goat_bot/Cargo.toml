@@ -8,4 +8,6 @@ goat_api = { path = "../goat_api" }
 log = { workspace = true }
 rand = { workspace = true }
 rayon = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt", "time"] }
+serde = { workspace = true }
+serde_json = { workspace = true }

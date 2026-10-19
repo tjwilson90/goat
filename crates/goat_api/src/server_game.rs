@@ -5,7 +5,7 @@ use crate::{
     WarHand, WarPhase, WarTrick,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ServerGame {
     pub phase: ServerPhase,
     pub players: Vec<UserId>,
@@ -13,7 +13,7 @@ pub struct ServerGame {
     pub seed: u64,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ServerPhase {
     Unstarted,
     War(WarPhase<Vec<Card>, ServerWarHand, ()>),

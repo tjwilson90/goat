@@ -132,10 +132,12 @@ impl WarHand for ClientWarHand {
     fn merge_into_rummy_hand(&self, won: Cards) -> Self::RummyHand {
         match self {
             ClientWarHand::Visible(hand) => ClientRummyHand {
+                public: won,
                 known: hand.merge_into_rummy_hand(won),
                 unknown: 0,
             },
             ClientWarHand::Hidden(len) => ClientRummyHand {
+                public: won,
                 known: won,
                 unknown: *len,
             },
