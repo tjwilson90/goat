@@ -5,11 +5,11 @@ use sha2::{Digest, Sha256};
 use tokio::time;
 use tokio::time::Duration;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use warp::{sse, Filter, Rejection, Reply};
+use warp::{Filter, Rejection, Reply, sse};
 
 pub use error::*;
 use goat_api::{Action, GameId, GoatError, RandId, UserId};
-use goat_bot::{AdaptSimulate, Bot, Strategy};
+use goat_bot::{Bot, Selected, Strategy};
 pub use server::*;
 pub use subscriber::*;
 
@@ -192,8 +192,9 @@ async fn main() {
         }
     });
 
+    let strategy = Selected::default();
     for &(name, _) in &BOTS {
-        run_bot(state, name.to_string(), AdaptSimulate);
+        run_bot(state, name.to_string(), strategy.clone());
     }
 
     let app = root()

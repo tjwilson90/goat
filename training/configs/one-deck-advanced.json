@@ -1,0 +1,6 @@
+{
+  "samples": 16,
+  "max_rollouts": 1024,
+  "endgame_cards": 26,
+  "endgame_nodes": 200000
+}

@@ -82,7 +82,8 @@ impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, Hist
             Event::ReceiveDreck { player, dreck } => {
                 let rummy = self.rummy()?;
                 let hand = &mut rummy.hands[player.idx()];
-                *hand += dreck;
+                // Redistribution is private to the recipient.
+                hand.known += dreck;
                 if rummy.finished_receiving_dreck() {
                     rummy.reset_trick();
                     rummy.advance_leader();
@@ -115,6 +116,8 @@ impl<PrevTrick: PreviousTrick, History: RummyHistory> ClientGame<PrevTrick, Hist
                 let rummy = self.rummy()?;
                 let hand = &mut rummy.hands[player.idx()];
                 if dreck > 0 {
+                    hand.public
+                        .remove_all(Cards::COMMON_DRECK + rummy.trump.with_rank(Rank::Six));
                     let cards = hand
                         .known
                         .remove_all(Cards::COMMON_DRECK + rummy.trump.with_rank(Rank::Six));

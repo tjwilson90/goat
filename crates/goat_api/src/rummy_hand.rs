@@ -38,6 +38,8 @@ impl RummyHand for Cards {
 pub struct ClientRummyHand {
     pub known: Cards,
     pub unknown: u8,
+    /// Cards whose ownership is public, including for the owner's own hand.
+    pub public: Cards,
 }
 
 impl RummyHand for ClientRummyHand {
@@ -57,17 +59,24 @@ impl RummyHand for ClientRummyHand {
 impl AddAssign<Card> for ClientRummyHand {
     fn add_assign(&mut self, rhs: Card) {
         self.known += rhs;
+        self.public += rhs;
     }
 }
 
 impl AddAssign<Cards> for ClientRummyHand {
     fn add_assign(&mut self, rhs: Cards) {
         self.known += rhs;
+        self.public += rhs;
     }
 }
 
 impl SubAssign<Cards> for ClientRummyHand {
     fn sub_assign(&mut self, rhs: Cards) {
+        for card in rhs.cards() {
+            if self.public.contains(card) {
+                self.public -= card;
+            }
+        }
         if self.known.contains_all(rhs) {
             self.known -= rhs;
         } else {
